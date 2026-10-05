@@ -179,11 +179,16 @@
               <span class="seg-name">Dots</span>
               <span class="seg-sub">experimental</span></label
             >
+            <label class="seg-option"
+              ><input type="radio" name="code" id="code-chroma" value="chroma" />
+              <span class="seg-name">Chroma</span>
+              <span class="seg-sub">4-color · lab first</span></label
+            >
           </div>
           <p class="hint">
-            Dots carry identical frames as anchored dot grids — no per-symbol error
-            correction, so the fountain code absorbs every drop. Close range, centered
-            captures only.
+            Dots and Chroma carry identical frames in different pixels — no restart or
+            receiver reset when switching. Both experimental: close range, centered
+            captures.
           </p>
           <p class="card-label">QR density</p>
           <div class="segment segment-auto" role="group" aria-label="QR density">

@@ -6,14 +6,23 @@
 // automatic switch to the jsQR worker. Frames are processed off the main
 // thread and skipped (never queued) when the pipeline is behind.
 
-import type { ResultMessage, ScanMessage } from '../workers/decode.worker.js';
+import type {
+  ResultMessage,
+  ScanMessage,
+  ScannedFrame,
+} from '../workers/decode.worker.js';
 import { latin1ToBytes } from '../qr/matrix.js';
 
 export type DecoderMode = 'auto' | 'native' | 'jsqr';
 export type DecoderSource = 'native' | 'jsqr';
+export type FrameKind = ScannedFrame['kind'];
 
 /** Return value tells the scanner whether the frame validated (CRC ok). */
-export type BytesHandler = (bytes: Uint8Array, source: DecoderSource) => boolean;
+export type BytesHandler = (
+  bytes: Uint8Array,
+  source: DecoderSource,
+  kind?: FrameKind,
+) => boolean;
 
 export interface ScannerCallbacks {
   onBytes: BytesHandler;
@@ -246,8 +255,8 @@ export class CameraScanner {
     this.worker.onmessage = (ev: MessageEvent<ResultMessage>) => {
       this.workerBusy = false;
       const msg = ev.data;
-      for (const buf of msg.frames) {
-        this.callbacks.onBytes(new Uint8Array(buf), 'jsqr');
+      for (const frame of msg.frames) {
+        this.callbacks.onBytes(new Uint8Array(frame.bytes), 'jsqr', frame.kind);
       }
     };
     this.worker.onerror = (): void => {
@@ -406,29 +415,34 @@ function rasterize(drawable: Drawable): ImageData {
 }
 
 /**
- * Decode every image file through the jsQR worker; returns the raw QR
- * payloads found (files without a readable QR are skipped).
+ * Decode every image file through the decode worker; returns tagged frame
+ * candidates (files without a readable code are skipped).
  */
-export async function decodeImageFiles(files: File[]): Promise<Uint8Array[]> {
+export async function decodeImageFiles(
+  files: File[],
+): Promise<{ bytes: Uint8Array; kind: FrameKind }[]> {
   if (typeof Worker !== 'function') {
     throw new Error('Web Workers are unavailable in this browser.');
   }
   const worker = new Worker(new URL('../workers/decode.worker.ts', import.meta.url), {
     type: 'module',
   });
-  const pending = new Map<number, (frames: Uint8Array[]) => void>();
+  const pending = new Map<
+    number,
+    (frames: { bytes: Uint8Array; kind: FrameKind }[]) => void
+  >();
   let scanId = 0;
   worker.onmessage = (ev: MessageEvent<ResultMessage>): void => {
     const msg = ev.data;
     const resolve = pending.get(msg.id);
     pending.delete(msg.id);
-    resolve?.(msg.frames.map((buf) => new Uint8Array(buf)));
+    resolve?.(msg.frames.map((f) => ({ bytes: new Uint8Array(f.bytes), kind: f.kind })));
   };
   worker.onerror = (): void => {
     for (const resolve of pending.values()) resolve([]);
     pending.clear();
   };
-  const found: Uint8Array[] = [];
+  const found: { bytes: Uint8Array; kind: FrameKind }[] = [];
   try {
     for (const file of files) {
       found.push(...(await decodeOneImage(worker, pending, file, () => ++scanId)));
@@ -441,16 +455,16 @@ export async function decodeImageFiles(files: File[]): Promise<Uint8Array[]> {
 
 async function decodeOneImage(
   worker: Worker,
-  pending: Map<number, (frames: Uint8Array[]) => void>,
+  pending: Map<number, (frames: { bytes: Uint8Array; kind: FrameKind }[]) => void>,
   file: File,
   nextId: () => number,
-): Promise<Uint8Array[]> {
+): Promise<{ bytes: Uint8Array; kind: FrameKind }[]> {
   let drawable: Drawable | null = null;
   try {
     drawable = await loadDrawable(file);
     const pixels = rasterize(drawable);
     const id = nextId();
-    const result = new Promise<Uint8Array[]>((resolve) => {
+    const result = new Promise<{ bytes: Uint8Array; kind: FrameKind }[]>((resolve) => {
       pending.set(id, resolve);
       const msg: ScanMessage = {
         kind: 'scan',

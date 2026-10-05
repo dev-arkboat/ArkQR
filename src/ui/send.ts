@@ -12,7 +12,7 @@ import {
   type DensityPreset,
   type PreparedTransfer,
 } from '../core/protocol.js';
-import { paintDots } from '../dot/render.js';
+import { paintChroma, paintDots } from '../dot/render.js';
 import { INK_COLORS, paintFrame, type InkName } from '../qr/paint.js';
 import type { EcLevel } from '../qr/matrix.js';
 import { EncodeClient, FrameStream, type TransferInfo } from '../workers/encodeClient.js';
@@ -53,8 +53,8 @@ export class SendController {
   private info: TransferInfo | null = null;
   private playing = false;
   private fps = 12;
-  /** Pixel family: QR symbols or experimental dot grids. Same frames either way. */
-  private code: 'qr' | 'dots' = 'qr';
+  /** Pixel family: QR symbols, dot grids, or color grids. Same frames either way. */
+  private code: 'qr' | 'dots' | 'chroma' = 'qr';
   private rafId = 0;
   private lastTick = 0;
   private framesSent = 0;
@@ -146,17 +146,19 @@ export class SendController {
         }
       });
     }
-    for (const code of ['qr', 'dots'] as const) {
+    for (const code of ['qr', 'dots', 'chroma'] as const) {
       el<HTMLInputElement>(`code-${code}`).addEventListener('change', () => {
         // Presentation only: identical frames, so no restart and no receiver
-        // reset — receivers decode both families automatically.
+        // reset — receivers decode every family automatically.
         this.code = this.selectedCode();
         el<HTMLDivElement>('qr-only').hidden = this.code !== 'qr';
         if (this.info) {
           this.setStatus(
             this.code === 'dots'
               ? 'Dot matrix: experimental, close range, centered captures.'
-              : 'QR symbols: universal.',
+              : this.code === 'chroma'
+                ? 'Chroma: experimental 4-color grids. Run the Lab probe first.'
+                : 'QR symbols: universal.',
           );
         }
       });
@@ -257,7 +259,8 @@ export class SendController {
     return el<HTMLInputElement>('ec-l').checked ? 'L' : 'M';
   }
 
-  private selectedCode(): 'qr' | 'dots' {
+  private selectedCode(): 'qr' | 'dots' | 'chroma' {
+    if (el<HTMLInputElement>('code-chroma').checked) return 'chroma';
     return el<HTMLInputElement>('code-dots').checked ? 'dots' : 'qr';
   }
 
@@ -304,6 +307,8 @@ export class SendController {
       const frame = await this.nextFrame(stream);
       if (this.code === 'dots') {
         paintDots(this.ui.canvas, frame, { targetSize: 640 });
+      } else if (this.code === 'chroma') {
+        paintChroma(this.ui.canvas, frame, { targetSize: 640 });
       } else {
         paintFrame(this.ui.canvas, frame, {
           targetSize: 640,

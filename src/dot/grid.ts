@@ -76,52 +76,86 @@ export function bitsToBytes(bits: Uint8Array): Uint8Array {
   return out;
 }
 
+export interface GridPixels {
+  width: number;
+  height: number;
+  data: Uint8ClampedArray<ArrayBuffer>;
+}
+
 /**
- * Rasterize a dot grid to raw pixels (white bg, black round data dots,
- * square anchors). Single geometry source for canvas painting and tests.
+ * Rasterize a dot grid to raw pixels (white bg, round data dots, square
+ * anchors). Cells carry a palette index via `ink`: null leaves white.
+ * Single geometry source for canvas painting and tests.
  */
-export function renderGridPixels(
-  bits: Uint8Array,
+export function rasterizeGrid(
   D: number,
   modulePx: number,
-): { width: number; height: number; data: Uint8ClampedArray<ArrayBuffer> } {
-  if (bits.length !== D * D) throw new Error('bit count must equal D*D');
+  ink: (cell: number) => [number, number, number] | null,
+): GridPixels {
   const { min, span } = gridExtent(D);
   const size = Math.ceil(span * modulePx);
   // Explicit ArrayBuffer so the pixels feed ImageData directly.
   const data = new Uint8ClampedArray(new ArrayBuffer(size * size * 4));
   data.fill(255);
-  const put = (px: number, py: number): void => {
+  const put = (px: number, py: number, rgb: [number, number, number]): void => {
     if (px < 0 || py < 0 || px >= size || py >= size) return;
     const o = (py * size + px) * 4;
-    data[o] = 0;
-    data[o + 1] = 0;
-    data[o + 2] = 0;
+    data[o] = rgb[0];
+    data[o + 1] = rgb[1];
+    data[o + 2] = rgb[2];
     data[o + 3] = 255;
   };
   const toPx = (m: number): number => Math.round((m - min) * modulePx);
   // Data dots (inscribed circles).
   for (let j = 0; j < D; j++) {
     for (let i = 0; i < D; i++) {
-      if (!bits[j * D + i]) continue;
+      const rgb = ink(j * D + i);
+      if (!rgb) continue;
       const cx = toPx(i + 0.5);
       const cy = toPx(j + 0.5);
       const r = modulePx / 2;
       for (let y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++) {
         for (let x = Math.floor(cx - r); x <= Math.ceil(cx + r); x++) {
-          if ((x - cx) ** 2 + (y - cy) ** 2 <= r * r) put(x, y);
+          if ((x - cx) ** 2 + (y - cy) ** 2 <= r * r) put(x, y, rgb);
         }
       }
     }
   }
-  // Anchors (solid squares).
+  // Anchors (solid black squares).
   for (const a of anchorSquares(D)) {
     const x0 = toPx(a.x);
     const y0 = toPx(a.y);
     const s = Math.round(a.size * modulePx);
     for (let y = y0; y < y0 + s; y++) {
-      for (let x = x0; x < x0 + s; x++) put(x, y);
+      for (let x = x0; x < x0 + s; x++) put(x, y, [0, 0, 0]);
     }
   }
   return { width: size, height: size, data };
+}
+
+/** Binary grid: black dot for 1, white for 0. */
+export function renderGridPixels(
+  bits: Uint8Array,
+  D: number,
+  modulePx: number,
+): GridPixels {
+  if (bits.length !== D * D) throw new Error('bit count must equal D*D');
+  return rasterizeGrid(D, modulePx, (cell) => (bits[cell] ? [0, 0, 0] : null));
+}
+
+/** Color grid: palette color per 2-bit cell value (0 = white). */
+export function renderColorGridPixels(
+  values: Uint8Array,
+  D: number,
+  modulePx: number,
+  palette: { r: number; g: number; b: number }[],
+): GridPixels {
+  if (values.length !== D * D) throw new Error('value count must equal D*D');
+  return rasterizeGrid(D, modulePx, (cell) => {
+    const v = values[cell];
+    if (v === 0) return null;
+    const color = palette[v];
+    if (!color) throw new Error(`bad color value ${v}`);
+    return [color.r, color.g, color.b];
+  });
 }

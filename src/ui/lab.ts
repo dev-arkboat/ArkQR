@@ -195,7 +195,7 @@ export class LabController {
     }
     if (judged === PROBE_PALETTE.length && failed.length === 0) {
       this.ui.verdict.textContent =
-        'All five hues separable with margin — color could carry data in this lighting, on these devices.';
+        'All five hues separable with margin — Chroma transfer may work on these devices, in this lighting. Try it in SEND.';
     } else if (failed.length > 0) {
       this.ui.verdict.textContent = `Not separable here: ${failed.join(', ')} smear${
         failed.length === 1 ? 's' : ''

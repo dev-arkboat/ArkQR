@@ -168,6 +168,41 @@ Receivers lock to the first `sessionId` seen and ignore others until reset.
   (larger blocks + higher fps on the proven single-code pipeline) is the
   speed lever, not tiling.
 
+### Dot-matrix physical layer (experimental option)
+
+- The same frame bytes, different pixels: white background, black round data
+  dots on a square grid, four solid square corner anchors (top-left 7×7
+  modules, the rest 5×5, giving absolute orientation), quiet zone included.
+  Anchors are located by connected-component analysis; a DLT homography maps
+  grid cells to image pixels (perspective-tolerant by construction).
+- Two grid sizes: D96 (≤1152 B) and D144 (≤2592 B), covering every legal
+  block size.
+- Reed-Solomon RS(255,223) over GF(256) protects the layer: frames are
+  zero-padded to 223-byte multiples, each chunk gets 32 parity bytes
+  (16 byte-error correction per chunk), then zero-padded to the grid.
+  Chunking re-derives deterministically from metadata, so no signaling is
+  needed. QR symbols are NOT double-encoded (their own symbol ECC already
+  covers them).
+- Receivers try QR first, then dot grids (size self-selects from anchor
+  geometry); the frame CRC gates everything. Before RS, drops here were
+  total; RS converts marginal captures into accepts, which is what makes
+  the dot layer viable at all.
+- Honest limits: close range, centered captures, black-on-white only.
+
+### Chroma grids (experimental color option)
+
+- Four states per module — white/red/green/blue = 2 bits — on the same
+  anchored geometry (black anchors, same homography detection). Roughly 4×
+  the density of binary dots at the same module size.
+- Calibration rides in the grid: the first 8 cells carry a fixed
+  white/red/green/blue reference pattern, sampled per capture. References and
+  data drift together under shifting white balance, which is what makes
+  classification viable outside a lab. Degenerate captures (references too
+  close together) are rejected before spending RS budget.
+- Same RS(255,223) protection over the resulting bytes; same deterministic
+  chunking; same CRC gate. Run the Lab color probe first: all-PASS hues
+  predict chroma viability on that hardware and lighting.
+
 ## 6. Density presets
 
 | Preset             | `blockSize` | Wire bytes/frame | Notes                                             |

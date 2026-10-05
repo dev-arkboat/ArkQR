@@ -12,6 +12,13 @@ import {
   DOT_SIZES,
   type DotSize,
 } from './grid.js';
+import {
+  CHROMA_REF_CELLS,
+  classifyChroma,
+  packQuads,
+  refsUsable,
+  type RGB,
+} from './chroma.js';
 
 export interface GrayImage {
   data: Uint8Array;
@@ -376,6 +383,55 @@ function selectSize(ordered: Blob[]): DotSize {
 }
 
 /**
+ * Locate the grid: grayscale -> threshold -> blobs -> anchor quad.
+ * Shared by the binary and chroma detectors (anchors are always black).
+ */
+export function locateGrid(
+  rgba: Uint8ClampedArray,
+  width: number,
+  height: number,
+): { gray: GrayImage; quad: Blob[] } | null {
+  const gray = toGray(rgba, width, height);
+  const t = otsuThreshold(gray);
+  const dark = new Uint8Array(width * height);
+  for (let i = 0; i < dark.length; i++) dark[i] = gray.data[i] < t ? 1 : 0;
+  const blobs = labelDarkBlobs(dark, width, height);
+  const quad = findAnchorQuad(blobs);
+  if (!quad) return null;
+  return { gray, quad };
+}
+
+/** Orientation-resolved homography: grid module coords -> image pixels. */
+export function homographyFor(quad: Blob[], D: DotSize): Homography | null {
+  const centers = anchorCenters(D);
+  // Angle-ascending order is clockwise (y-down) for normal views and
+  // counter-clockwise for mirrored ones; map accordingly, no trial needed.
+  const pts = quad.map((b) => ({ x: b.cx, y: b.cy }));
+  const mapped =
+    signedArea(pts) > 0
+      ? [pts[0], pts[1], pts[2], pts[3]]
+      : [pts[0], pts[3], pts[2], pts[1]];
+  return solveHomography(centers, mapped);
+}
+
+/** Screen region (anchor bbox expanded) for adaptive thresholding. */
+export function screenRegion(quad: Blob[]): {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+} {
+  const xs = quad.map((b) => b.cx);
+  const ys = quad.map((b) => b.cy);
+  return {
+    x: Math.floor(Math.min(...xs) * 0.8),
+    y: Math.floor(Math.min(...ys) * 0.8),
+    w: Math.ceil((Math.max(...xs) - Math.min(...xs)) * 1.25),
+    h: Math.ceil((Math.max(...ys) - Math.min(...ys)) * 1.25),
+  };
+}
+
+/**
  * Full detect: anchor quad -> size -> homography -> sample. Returns sampled
  * grid bytes (RS-decoding happens in the caller); null when uncertain. The
  * frame CRC downstream is the final arbiter.
@@ -385,34 +441,14 @@ export function detectDotFrame(
   width: number,
   height: number,
 ): DotDetection | null {
-  const gray = toGray(rgba, width, height);
-  const t = otsuThreshold(gray);
-  const dark = new Uint8Array(width * height);
-  for (let i = 0; i < dark.length; i++) dark[i] = gray.data[i] < t ? 1 : 0;
-  const blobs = labelDarkBlobs(dark, width, height);
-  const quad = findAnchorQuad(blobs);
-  if (!quad) return null;
+  const found = locateGrid(rgba, width, height);
+  if (!found) return null;
+  const { gray, quad } = found;
   const size = selectSize(quad);
-  const centers = anchorCenters(size);
-  // Angle-ascending order is clockwise (y-down) for normal views and
-  // counter-clockwise for mirrored ones; map accordingly, no trial needed.
-  const pts = quad.map((b) => ({ x: b.cx, y: b.cy }));
-  const mapped =
-    signedArea(pts) > 0
-      ? [pts[0], pts[1], pts[2], pts[3]]
-      : [pts[0], pts[3], pts[2], pts[1]];
-  const H = solveHomography(centers, mapped);
+  const H = homographyFor(quad, size);
   if (!H) return null;
   // Threshold from the screen region (anchor bbox expanded): bimodal there.
-  const xs = pts.map((p) => p.x);
-  const ys = pts.map((p) => p.y);
-  const region = {
-    x: Math.floor(Math.min(...xs) * 0.8),
-    y: Math.floor(Math.min(...ys) * 0.8),
-    w: Math.ceil((Math.max(...xs) - Math.min(...xs)) * 1.25),
-    h: Math.ceil((Math.max(...ys) - Math.min(...ys)) * 1.25),
-  };
-  const t2 = otsuThreshold(gray, region);
+  const t2 = otsuThreshold(gray, screenRegion(quad));
   const bits = new Uint8Array(size * size);
   for (let j = 0; j < size; j++) {
     for (let i = 0; i < size; i++) {
@@ -424,4 +460,66 @@ export function detectDotFrame(
     }
   }
   return { bytes: bitsToBytes(bits), size };
+}
+
+export interface ChromaDetection {
+  /** Classified 2-bit values packed MSB-first (4 cells per byte). */
+  packed: Uint8Array;
+  size: DotSize;
+}
+
+/**
+ * Chroma detect: same anchors/geometry as binary dots, but module colors
+ * are matched against per-capture calibration references (first 8 cells).
+ * Returns packed values for RS-decoding upstream, or null when references
+ * are degenerate or geometry fails.
+ */
+export function detectChromaFrame(
+  rgba: Uint8ClampedArray,
+  width: number,
+  height: number,
+): ChromaDetection | null {
+  const found = locateGrid(rgba, width, height);
+  if (!found) return null;
+  const { quad } = found;
+  const size = selectSize(quad);
+  const H = homographyFor(quad, size);
+  if (!H) return null;
+  const sampleRgb = (i: number, j: number): RGB | null => {
+    const p = applyHomography(H, i + 0.5, j + 0.5);
+    const px = Math.round(p.x);
+    const py = Math.round(p.y);
+    if (px < 0 || py < 0 || px >= width || py >= height) return null;
+    const o = (py * width + px) * 4;
+    return { r: rgba[o], g: rgba[o + 1], b: rgba[o + 2] };
+  };
+  // Calibration references: two samples per palette color, averaged.
+  const refCells: RGB[][] = [[], [], [], []];
+  for (let k = 0; k < CHROMA_REF_CELLS; k++) {
+    const rgb = sampleRgb(k, 0);
+    if (!rgb) return null;
+    refCells[k % 4].push(rgb);
+  }
+  const refs = refCells.map((list) => {
+    const n = Math.max(1, list.length);
+    let r = 0;
+    let g = 0;
+    let b = 0;
+    for (const s of list) {
+      r += s.r;
+      g += s.g;
+      b += s.b;
+    }
+    return { r: r / n, g: g / n, b: b / n };
+  }) as [RGB, RGB, RGB, RGB];
+  if (!refsUsable(refs)) return null;
+  const values = new Uint8Array(size * size);
+  for (let j = 0; j < size; j++) {
+    for (let i = 0; i < size; i++) {
+      const rgb = sampleRgb(i, j);
+      if (!rgb) return null;
+      values[j * size + i] = classifyChroma(rgb, refs).value;
+    }
+  }
+  return { packed: packQuads(values), size };
 }

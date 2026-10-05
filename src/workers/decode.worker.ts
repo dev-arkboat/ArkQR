@@ -8,6 +8,7 @@
 // the main thread is the final arbiter.
 
 import jsQR from 'jsqr';
+import { detectChromaFrame } from '../dot/detect.js';
 import { detectDotFrame } from '../dot/detect.js';
 
 export interface ScanMessage {
@@ -21,33 +22,46 @@ export interface ScanMessage {
 export interface ResultMessage {
   kind: 'result';
   id: number;
-  /** Raw byte-mode payloads found (usually 0 or 1). */
-  frames: ArrayBuffer[];
+  /** Tagged candidates; the frame CRC downstream gates every family. */
+  frames: ScannedFrame[];
+}
+
+/** One decoded candidate: family tag routes downstream processing. */
+export interface ScannedFrame {
+  kind: 'qr' | 'dots' | 'chroma';
+  bytes: ArrayBuffer;
 }
 
 self.onmessage = (ev: MessageEvent<ScanMessage>): void => {
   const msg = ev.data;
   try {
-    const frames: ArrayBuffer[] = [];
-    const push = (bytes: Uint8Array): void => {
+    const frames: ScannedFrame[] = [];
+    const push = (kind: ScannedFrame['kind'], bytes: Uint8Array): void => {
       // Copy into a fresh ArrayBuffer so ownership transfers cleanly.
       const buf = new ArrayBuffer(bytes.byteLength);
       new Uint8Array(buf).set(bytes);
-      frames.push(buf);
+      frames.push({ kind, bytes: buf });
     };
     const code = jsQR(msg.data, msg.width, msg.height, {
       inversionAttempts: 'attemptBoth',
     });
     if (code) {
-      push(Uint8Array.from(code.binaryData));
+      push('qr', Uint8Array.from(code.binaryData));
     } else {
       // Experimental dot grids: size self-selects from anchor geometry.
       const det = detectDotFrame(msg.data, msg.width, msg.height);
-      if (det) push(det.bytes);
+      if (det) {
+        push('dots', det.bytes);
+      } else {
+        // Experimental color grids: per-capture calibration + RS layer.
+        const chroma = detectChromaFrame(msg.data, msg.width, msg.height);
+        if (chroma) push('chroma', chroma.packed);
+      }
     }
+    const transfer = frames.map((f) => f.bytes);
     self.postMessage(
       { kind: 'result', id: msg.id, frames } satisfies ResultMessage,
-      frames,
+      transfer,
     );
   } catch {
     self.postMessage({ kind: 'result', id: msg.id, frames: [] } satisfies ResultMessage);

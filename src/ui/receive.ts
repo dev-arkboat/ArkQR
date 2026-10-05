@@ -19,7 +19,9 @@ import {
   nativeDetectorSupported,
   type DecoderMode,
   type DecoderSource,
+  type FrameKind,
 } from '../camera/scanner.js';
+import { chromaDecodeGrid } from '../dot/chroma.js';
 import { notify } from './feedback.js';
 
 function el<T extends HTMLElement>(id: string): T {
@@ -48,7 +50,7 @@ export class ReceiveController {
   private decoder: LtDecoder | null = null;
   private lockedSession: Uint8Array | null = null;
   /** Raw frames seen before metadata arrived (replayed once it does). */
-  private pendingRaw: Uint8Array[] = [];
+  private pendingRaw: { bytes: Uint8Array; kind: FrameKind }[] = [];
   private accepted = 0;
   private rejected = 0;
   private duplicates = 0;
@@ -203,14 +205,14 @@ export class ReceiveController {
     this.ui.photoBtn.disabled = true;
     try {
       const frames = await decodeImageFiles(files);
-      for (const bytes of frames) this.handleBytes(bytes, 'jsqr');
+      for (const frame of frames) this.handleBytes(frame.bytes, 'jsqr', frame.kind);
       if (frames.length === 0) {
         this.showError(
           'No QR code found in the selected photo(s). Get closer, keep the QR flat and glare-free, and try again.',
         );
         this.ui.photoStatus.textContent = '';
       } else {
-        this.ui.photoStatus.textContent = `Photo scan: ${frames.length} QR frame(s) from ${files.length} image(s). Load more photos of later frames to continue.`;
+        this.ui.photoStatus.textContent = `Photo scan: ${frames.length} frame(s) from ${files.length} image(s). Load more photos of later frames to continue.`;
       }
     } catch (err) {
       this.showError(err instanceof Error ? err.message : 'Could not decode the photos.');
@@ -250,12 +252,19 @@ export class ReceiveController {
   }
 
   /** Returns true when the scanned payload validated (drives native->jsQR fallback). */
-  private handleBytes(bytes: Uint8Array, _source: DecoderSource): boolean {
+  private handleBytes(
+    bytes: Uint8Array,
+    _source: DecoderSource,
+    kind: FrameKind = 'qr',
+  ): boolean {
     if (this.done) return true;
+    if (kind === 'chroma') return this.handleChromaBytes(bytes);
     const direct = decodeFrame(bytes);
     if (direct.ok) {
       if (direct.frame.kind === 'data' && !this.meta) {
-        if (this.pendingRaw.length < PENDING_CAP) this.pendingRaw.push(bytes.slice());
+        if (this.pendingRaw.length < PENDING_CAP) {
+          this.pendingRaw.push({ bytes: bytes.slice(), kind });
+        }
         return true;
       }
       return this.dispatch(direct.frame);
@@ -272,8 +281,33 @@ export class ReceiveController {
       this.renderProgress();
       return false;
     }
-    if (this.pendingRaw.length < PENDING_CAP) this.pendingRaw.push(bytes.slice());
+    if (this.pendingRaw.length < PENDING_CAP) {
+      this.pendingRaw.push({ bytes: bytes.slice(), kind });
+    }
     return true;
+  }
+
+  /** Chroma (color-grid) payloads: RS-decode, then validate like any frame. */
+  private handleChromaBytes(bytes: Uint8Array): boolean {
+    if (!this.meta) {
+      if (this.pendingRaw.length < PENDING_CAP) {
+        this.pendingRaw.push({ bytes: bytes.slice(), kind: 'chroma' });
+      }
+      return true;
+    }
+    const gridBytes = chromaDecodeGrid(bytes, 16 + this.meta.blockSize);
+    if (!gridBytes) {
+      this.rejected++;
+      this.renderProgress();
+      return false;
+    }
+    const res = decodeFrame(gridBytes);
+    if (!res.ok) {
+      this.rejected++;
+      this.renderProgress();
+      return false;
+    }
+    return this.dispatch(res.frame);
   }
 
   private dispatch(frame: DecodedFrame): boolean {
@@ -320,7 +354,7 @@ export class ReceiveController {
     }
     this.decoder = new LtDecoder(meta.blockCount, meta.blockSize);
     // Replay raw frames that arrived before the metadata (late join order).
-    for (const raw of this.pendingRaw) this.handleBytes(raw, 'jsqr');
+    for (const p of this.pendingRaw) this.handleBytes(p.bytes, 'jsqr', p.kind);
     this.pendingRaw = [];
     this.renderProgress();
     void this.maybeDecode(true);
