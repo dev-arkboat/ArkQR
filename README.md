@@ -91,17 +91,19 @@ executed or rendered — only offered as a download.
 
 ## Dependencies (justified)
 
-| Package                                                         | Why                                                                                                   |
-| --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `qrcode-generator`                                              | QR **encoding**: zero-dep, true byte-mode (raw bytes preserved), auto version, works in workers/Node. |
-| `jsqr`                                                          | QR **decoding** fallback + integration tests: pure JS, worker/Node-safe, exposes raw `binaryData`.    |
-| `vite`, `typescript`, `vitest`, `eslint`, `prettier` (dev only) | Build, strict types, tests, lint, format. No UI framework — vanilla TS, tiny offline bundle.          |
+| Package                                                         | Why                                                                                                                                   |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `qrcode-generator`                                              | QR **encoding**: zero-dep, true byte-mode (raw bytes preserved), auto version, works in workers/Node.                                 |
+| `jsqr`                                                          | QR **decoding** fallback + integration tests: pure JS, worker/Node-safe, exposes raw `binaryData`.                                    |
+| `vite`, `typescript`, `vitest`, `eslint`, `prettier` (dev only) | Build, strict types, tests, lint, format. No UI framework — vanilla TS, tiny offline bundle.                                          |
+| `@vitejs/plugin-basic-ssl` (dev only)                           | Self-signed HTTPS for `npm run dev:https` so phone cameras work in LAN testing (browsers gate `getUserMedia` behind secure contexts). |
 
 ## Develop
 
 ```sh
 npm ci
 npm run dev        # local dev (use https/localhost for camera)
+npm run dev:https   # self-signed HTTPS on LAN, for phone camera testing
 npm run test       # vitest: CRC/PRNG/framing/LT + loss sims + QR integration
 npm run lint       # eslint (strict typed)
 npm run format     # prettier check
@@ -111,10 +113,14 @@ npm run build      # static production build in dist/
 
 CI (`.github/workflows/ci.yml`) runs lint → typecheck → tests → build.
 
-## Deploy (GitHub Pages)
+## Deploy
 
 The build is a static site with relative paths (`base: './'`), so it works
-from any sub-path:
+from any sub-path. Full production guide (GitHub Pages, Netlify, Vercel,
+Cloudflare Pages, nginx/Caddy/Apache, custom domains, cache headers,
+post-deploy verification): [`DEPLOY.md`](./DEPLOY.md).
+
+Quick start (GitHub Pages):
 
 ```sh
 npm run build
@@ -124,7 +130,8 @@ npx gh-pages -d dist
 
 Then serve over **HTTPS** (Pages does this by default) so `getUserMedia`
 works. For local camera testing use `npm run dev` (localhost is a secure
-context) or serve `dist/` over TLS.
+context), or `npm run dev:https` for self-signed HTTPS on your LAN so phones
+can use their cameras. No camera at all? RECEIVE offers “Scan from photo”.
 
 ## Future: passphrase encryption (extension point)
 

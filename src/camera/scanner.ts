@@ -55,6 +55,59 @@ export function cameraSupported(): boolean {
   );
 }
 
+/**
+ * Camera access requires a secure context (HTTPS or localhost); on plain
+ * HTTP, opened files, etc. the platform exposes no camera API at all.
+ */
+export function isSecureContext(): boolean {
+  return typeof window !== 'undefined' && window.isSecureContext;
+}
+
+/** Actionable guidance when the page itself cannot offer the camera. */
+export function insecureContextHint(): string {
+  if (typeof window === 'undefined' || !window.location) {
+    return 'Camera access needs a secure context: serve ArkQR over HTTPS or localhost.';
+  }
+  const protocol = window.location.protocol;
+  const host = window.location.host || window.location.hostname;
+  if (protocol === 'file:') {
+    return 'This page was opened as a file, so the browser exposes no camera. Serve it instead (e.g. run "npm run dev" and open the localhost URL), or deploy over HTTPS. No camera at all? Use “Scan from photo” below.';
+  }
+  return (
+    `Camera access needs HTTPS or localhost (currently ${protocol}//${host}). ` +
+    'For phone-to-phone testing over LAN run "npm run dev:https", accept the self-signed certificate, and open the https:// address it prints. ' +
+    'No camera at all? Use “Scan from photo” below.'
+  );
+}
+
+/**
+ * Pure mapping of getUserMedia failures to actionable messages (kept
+ * function-pure for unit tests; context advice lives in insecureContextHint).
+ */
+export function describeCameraError(err: unknown): string {
+  const name = err instanceof Error ? err.name : '';
+  if (name === 'NotAllowedError') {
+    return 'Camera permission was denied. Re-allow it in the browser site settings (lock/tune icon in the address bar), then press Start camera again.';
+  }
+  if (name === 'SecurityError') {
+    return 'The browser blocked the camera for security reasons — this usually means an insecure context. Serve over HTTPS or localhost and try again.';
+  }
+  if (name === 'NotFoundError') {
+    return 'No camera was found on this device. Attach or enable one, or use “Scan from photo” instead.';
+  }
+  if (name === 'OverconstrainedError') {
+    return 'No camera on this device matches the requested mode. Use “Scan from photo” instead, or try another device.';
+  }
+  if (name === 'NotReadableError') {
+    return 'The camera is in use by another app or tab. Close it and try again.';
+  }
+  if (name === 'AbortError') {
+    return 'The camera start was interrupted. Press Start camera and try again.';
+  }
+  const detail = name ? ` (${name})` : '';
+  return `Could not start the camera${detail}. Check permission, close other apps using the camera, and use HTTPS or localhost.`;
+}
+
 export async function nativeDetectorSupported(): Promise<boolean> {
   const Ctor = getDetectorConstructor();
   if (!Ctor) return false;
@@ -95,10 +148,15 @@ export class CameraScanner {
 
   async start(): Promise<void> {
     if (this.running) return;
-    if (!cameraSupported()) {
-      throw new Error('Camera capture is not supported in this browser.');
+    if (!isSecureContext()) {
+      throw new Error(insecureContextHint());
     }
-    const constraints: MediaStreamConstraints = {
+    if (!cameraSupported()) {
+      throw new Error(
+        'Camera capture is not supported in this browser. Use “Scan from photo” instead, or try current Chrome/Safari/Firefox.',
+      );
+    }
+    const full: MediaStreamConstraints = {
       audio: false,
       video: {
         facingMode: { ideal: 'environment' },
@@ -108,9 +166,22 @@ export class CameraScanner {
     };
     let stream: MediaStream;
     try {
-      stream = await navigator.mediaDevices.getUserMedia(constraints);
+      stream = await navigator.mediaDevices.getUserMedia(full);
     } catch (err) {
-      throw new Error(permissionMessage(err));
+      // Over-strict ideals (e.g. a desktop with one odd webcam) should not
+      // be fatal: retry with the bare minimum before giving up.
+      if (err instanceof Error && err.name === 'OverconstrainedError') {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: true,
+          });
+        } catch (retryErr) {
+          throw new Error(describeCameraError(retryErr));
+        }
+      } else {
+        throw new Error(describeCameraError(err));
+      }
     }
     this.stream = stream;
     this.video.srcObject = stream;
@@ -271,16 +342,138 @@ export class CameraScanner {
   }
 }
 
-function permissionMessage(err: unknown): string {
-  const name = err instanceof DOMException ? err.name : '';
-  if (name === 'NotAllowedError' || name === 'SecurityError') {
-    return 'Camera access was denied. Allow camera permission and use HTTPS or localhost, then try again.';
+// ---- Still-photo fallback -------------------------------------------------
+// No camera, denied permission, or desktop testing: decode QR frames from
+// image files (photos of the sender screen, screenshots). One photo carries
+// one frame; each decoded frame feeds the exact same validation + fountain
+// pipeline as live scans.
+
+const STILL_MAX_DIM = 1600;
+const STILL_TIMEOUT_MS = 20000;
+
+interface Drawable {
+  source: CanvasImageSource;
+  width: number;
+  height: number;
+  dispose?: () => void;
+}
+
+async function loadDrawable(file: File): Promise<Drawable> {
+  if (typeof createImageBitmap === 'function') {
+    try {
+      const bitmap = await createImageBitmap(file);
+      return {
+        source: bitmap,
+        width: bitmap.width,
+        height: bitmap.height,
+        dispose: () => {
+          bitmap.close();
+        },
+      };
+    } catch {
+      // Fall through to the <img> path (e.g. an exotic format).
+    }
   }
-  if (name === 'NotFoundError' || name === 'OverconstrainedError') {
-    return 'No suitable camera was found on this device.';
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => {
+        resolve();
+      };
+      img.onerror = () => {
+        reject(new Error('unreadable image'));
+      };
+      img.src = url;
+    });
+    return { source: img, width: img.naturalWidth, height: img.naturalHeight };
+  } finally {
+    URL.revokeObjectURL(url);
   }
-  if (name === 'NotReadableError') {
-    return 'The camera is in use by another app. Close it and try again.';
+}
+
+function rasterize(drawable: Drawable): ImageData {
+  const scale = Math.min(1, STILL_MAX_DIM / Math.max(drawable.width, drawable.height));
+  const w = Math.max(2, Math.round(drawable.width * scale));
+  const h = Math.max(2, Math.round(drawable.height * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) throw new Error('2D canvas is unavailable in this browser.');
+  ctx.drawImage(drawable.source, 0, 0, w, h);
+  return ctx.getImageData(0, 0, w, h);
+}
+
+/**
+ * Decode every image file through the jsQR worker; returns the raw QR
+ * payloads found (files without a readable QR are skipped).
+ */
+export async function decodeImageFiles(files: File[]): Promise<Uint8Array[]> {
+  if (typeof Worker !== 'function') {
+    throw new Error('Web Workers are unavailable in this browser.');
   }
-  return 'Could not start the camera. Use HTTPS or localhost and grant permission, then try again.';
+  const worker = new Worker(new URL('../workers/decode.worker.ts', import.meta.url), {
+    type: 'module',
+  });
+  const pending = new Map<number, (bytes: Uint8Array | null) => void>();
+  let scanId = 0;
+  worker.onmessage = (ev: MessageEvent<ResultMessage>): void => {
+    const msg = ev.data;
+    const resolve = pending.get(msg.id);
+    pending.delete(msg.id);
+    resolve?.(msg.found && msg.bytes ? new Uint8Array(msg.bytes) : null);
+  };
+  worker.onerror = (): void => {
+    for (const resolve of pending.values()) resolve(null);
+    pending.clear();
+  };
+  const found: Uint8Array[] = [];
+  try {
+    for (const file of files) {
+      const bytes = await decodeOneImage(worker, pending, file, () => ++scanId);
+      if (bytes) found.push(bytes);
+    }
+  } finally {
+    worker.terminate();
+  }
+  return found;
+}
+
+async function decodeOneImage(
+  worker: Worker,
+  pending: Map<number, (bytes: Uint8Array | null) => void>,
+  file: File,
+  nextId: () => number,
+): Promise<Uint8Array | null> {
+  let drawable: Drawable | null = null;
+  try {
+    drawable = await loadDrawable(file);
+    const pixels = rasterize(drawable);
+    const id = nextId();
+    const result = new Promise<Uint8Array | null>((resolve) => {
+      pending.set(id, resolve);
+      const msg: ScanMessage = {
+        kind: 'scan',
+        id,
+        data: pixels.data,
+        width: pixels.width,
+        height: pixels.height,
+      };
+      try {
+        worker.postMessage(msg, [pixels.data.buffer]);
+      } catch {
+        pending.delete(id);
+        resolve(null);
+      }
+      setTimeout(() => {
+        if (pending.delete(id)) resolve(null);
+      }, STILL_TIMEOUT_MS);
+    });
+    return await result;
+  } catch {
+    return null;
+  } finally {
+    drawable?.dispose?.();
+  }
 }

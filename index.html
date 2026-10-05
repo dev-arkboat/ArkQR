@@ -251,7 +251,8 @@
         </ol>
         <p class="hint">
           Point your camera at the sender's screen. Needs HTTPS or localhost for camera
-          access.
+          access. No camera, or camera blocked? Photograph or screenshot QR frames and
+          load them with “Scan from photo”.
         </p>
 
         <ul
@@ -282,8 +283,18 @@
           <button id="cam-start" class="btn-primary" type="button">Start camera</button>
           <button id="cam-stop" type="button" disabled>Stop</button>
           <button id="rx-reset" type="button">Reset</button>
+          <button id="photo-btn" type="button">Scan from photo</button>
         </div>
+        <input
+          id="photo-input"
+          type="file"
+          accept="image/*"
+          multiple
+          class="visually-hidden"
+          aria-label="Load photos or screenshots of QR frames"
+        />
         <p id="rx-strategy" class="hint" role="status"></p>
+        <p id="rx-photo-status" class="hint" role="status"></p>
 
         <div class="video-wrap">
           <video id="rx-video" playsinline muted aria-label="Camera preview"></video>

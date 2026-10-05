@@ -12,6 +12,8 @@ import { sanitizeFileName } from '../core/sanitize.js';
 import {
   CameraScanner,
   cameraSupported,
+  decodeImageFiles,
+  isSecureContext,
   nativeDetectorSupported,
   type DecoderMode,
   type DecoderSource,
@@ -66,6 +68,9 @@ export class ReceiveController {
     camStart: el<HTMLButtonElement>('cam-start'),
     camStop: el<HTMLButtonElement>('cam-stop'),
     reset: el<HTMLButtonElement>('rx-reset'),
+    photoBtn: el<HTMLButtonElement>('photo-btn'),
+    photoInput: el<HTMLInputElement>('photo-input'),
+    photoStatus: el<HTMLParagraphElement>('rx-photo-status'),
     video: el<HTMLVideoElement>('rx-video'),
     canvas: el<HTMLCanvasElement>('rx-canvas'),
     standby: el<HTMLDivElement>('rx-standby'),
@@ -98,6 +103,12 @@ export class ReceiveController {
     this.ui.reset.addEventListener('click', () => {
       this.reset();
     });
+    this.ui.photoBtn.addEventListener('click', () => {
+      this.ui.photoInput.click();
+    });
+    this.ui.photoInput.addEventListener('change', () => {
+      void this.handlePhotos();
+    });
     this.ui.decoderMode.addEventListener('change', () => {
       if (this.scanner) {
         void this.restartWithMode();
@@ -107,7 +118,8 @@ export class ReceiveController {
 
   private async renderSupport(): Promise<void> {
     const items: [string, boolean][] = [
-      ['Camera API (needs HTTPS or localhost)', cameraSupported()],
+      ['Secure context — camera needs HTTPS or localhost', isSecureContext()],
+      ['Camera API', cameraSupported()],
       ['Web Workers', typeof Worker === 'function'],
       ['SHA-256 (SubtleCrypto)', !!globalThis.crypto?.subtle],
       ['gzip (CompressionStream, optional)', typeof CompressionStream === 'function'],
@@ -179,6 +191,34 @@ export class ReceiveController {
     this.ui.standby.hidden = false;
   }
 
+  /** Still-photo fallback: decode QR frames from images, no camera needed. */
+  private async handlePhotos(): Promise<void> {
+    const input = this.ui.photoInput;
+    const files = [...(input.files ?? [])].slice(0, 50);
+    input.value = '';
+    if (files.length === 0) return;
+    this.hideError();
+    this.ui.photoStatus.textContent = `Decoding ${files.length} photo(s)…`;
+    this.ui.photoBtn.disabled = true;
+    try {
+      const frames = await decodeImageFiles(files);
+      for (const bytes of frames) this.handleBytes(bytes, 'jsqr');
+      if (frames.length === 0) {
+        this.showError(
+          'No QR code found in the selected photo(s). Get closer, keep the QR flat and glare-free, and try again.',
+        );
+        this.ui.photoStatus.textContent = '';
+      } else {
+        this.ui.photoStatus.textContent = `Photo scan: ${frames.length}/${files.length} image(s) held a QR frame. Load more photos of later frames to continue.`;
+      }
+    } catch (err) {
+      this.showError(err instanceof Error ? err.message : 'Could not decode the photos.');
+      this.ui.photoStatus.textContent = '';
+    } finally {
+      this.ui.photoBtn.disabled = false;
+    }
+  }
+
   reset(): void {
     this.meta = null;
     this.decoder = null;
@@ -199,6 +239,7 @@ export class ReceiveController {
     this.ui.done.hidden = true;
     this.hideError();
     this.hideWarning();
+    this.ui.photoStatus.textContent = '';
     this.renderProgress();
     this.ui.fileName.textContent = '—';
     this.ui.session.textContent = '—';
