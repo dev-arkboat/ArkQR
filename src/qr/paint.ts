@@ -4,6 +4,28 @@
 
 import { encodeToMatrix, type QrMatrix } from './matrix.js';
 
+export type InkName = 'black' | 'red' | 'green' | 'blue';
+
+/**
+ * Module ink palette. Decoding reads luminance, so red/blue behave like
+ * black; pure green is much lighter and may scan worse on some phones
+ * (labelled experimental in the UI). Presentation only — never wire format.
+ */
+export const INK_COLORS: Record<InkName, string> = {
+  black: '#000000',
+  red: '#ff0000',
+  green: '#00ff00',
+  blue: '#0000ff',
+};
+
+/** Rec.709 relative luminance of a #rrggbb color, 0 (black) to 255 (white). */
+export function luminance(hex: string): number {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
 export interface PaintOptions {
   /** Target canvas CSS/bitmap size in px (canvas is square). Default 640. */
   targetSize?: number;

@@ -155,6 +155,9 @@ Receivers lock to the first `sessionId` seen and ignore others until reset.
   version-40-M capacity.
 - Rendered large on `<canvas>`: white background, dark modules, quiet zone ≥ 4
   modules, integer pixel scaling, `image-rendering: pixelated`.
+- Module ink (black / pure red / green / blue) is presentation only: decoders
+  read luminance, so the binary payload is identical. Pure green is lightest
+  and may scan worse; the Lab color probe measures this per device.
 - One frame per screen refresh. Multi-code tiled screens were prototyped and
   rejected: handheld tilt/keystone misaligns tiles, and the jsQR decoder
   handles exactly one code per image, so tiles fail in real hands. Density

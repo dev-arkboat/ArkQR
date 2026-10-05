@@ -12,7 +12,7 @@ import {
   type DensityPreset,
   type PreparedTransfer,
 } from '../core/protocol.js';
-import { paintFrame } from '../qr/paint.js';
+import { INK_COLORS, paintFrame, type InkName } from '../qr/paint.js';
 import { EncodeClient, FrameStream, type TransferInfo } from '../workers/encodeClient.js';
 import { WakeLock } from './wake.js';
 
@@ -225,6 +225,13 @@ export class SendController {
     return DENSITY_PRESETS.balanced.blockSize;
   }
 
+  private selectedInk(): string {
+    for (const ink of ['black', 'red', 'green', 'blue'] as InkName[]) {
+      if (el<HTMLInputElement>(`ink-${ink}`).checked) return INK_COLORS[ink];
+    }
+    return INK_COLORS.black;
+  }
+
   private refreshEta(): void {
     if (!this.info) {
       this.ui.eta.textContent = '—';
@@ -266,7 +273,10 @@ export class SendController {
     this.showing = true;
     try {
       const frame = await this.nextFrame(stream);
-      paintFrame(this.ui.canvas, frame, { targetSize: 640 });
+      paintFrame(this.ui.canvas, frame, {
+        targetSize: 640,
+        foreground: this.selectedInk(),
+      });
       this.framesSent++;
       this.ui.frames.textContent = String(this.framesSent);
     } catch (err) {
@@ -406,6 +416,8 @@ export class SendController {
         if (!this.exportRecorder || !this.exportStream || !this.exportCanvas) return;
         try {
           const frame = await this.exportStream.next();
+          // Export always uses black ink: recordings compress and blur color
+          // worse than live screens, so maximum luminance contrast wins.
           paintFrame(this.exportCanvas, frame, { targetSize: EXPORT_SIZE });
           this.exportFrames++;
           const secs = Math.floor((Date.now() - started) / 1000);
