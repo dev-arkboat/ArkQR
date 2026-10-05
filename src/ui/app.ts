@@ -1,6 +1,7 @@
 // App shell: tab navigation (keyboard friendly), theme toggle, service
 // worker registration, and lazy controller boot.
 
+import { LabController } from './lab.js';
 import { ReceiveController } from './receive.js';
 import { SendController } from './send.js';
 
@@ -38,10 +39,12 @@ function initTabs(): void {
   const tabs = [
     document.getElementById('tab-send'),
     document.getElementById('tab-receive'),
+    document.getElementById('tab-lab'),
   ];
   const panels = [
     document.getElementById('panel-send'),
     document.getElementById('panel-receive'),
+    document.getElementById('panel-lab'),
   ];
   if (tabs.some((t) => !t) || panels.some((p) => !p)) return;
 
@@ -88,4 +91,5 @@ export function initApp(): void {
   registerServiceWorker();
   new SendController().init();
   void new ReceiveController().init();
+  new LabController().init();
 }

@@ -147,7 +147,7 @@ h3 {
 
 .tabs {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 0.25rem;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -769,7 +769,86 @@ a.btn-primary {
   flex: none;
 }
 
-/* ---------- footer / a11y ---------- */
+/* ---------- lab: color probe ---------- */
+
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-block: 0.75rem;
+}
+
+.swatch {
+  margin: 0;
+  text-align: center;
+}
+
+.sw-color {
+  display: block;
+  aspect-ratio: 1;
+  border-radius: var(--r-ctl);
+  border: 1px solid var(--border);
+}
+
+.sw-white {
+  background: #ffffff;
+}
+
+.sw-black {
+  background: #000000;
+}
+
+.sw-red {
+  background: #ff0000;
+}
+
+.sw-green {
+  background: #00ff00;
+}
+
+.sw-blue {
+  background: #0000ff;
+}
+
+.swatch figcaption {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-top: 0.25rem;
+  overflow-wrap: anywhere;
+}
+
+.video-wrap-small {
+  aspect-ratio: 16 / 10;
+}
+
+.lab-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.lab-table th,
+.lab-table td {
+  text-align: left;
+  padding: 0.35rem 0.4rem;
+  border-bottom: 1px solid var(--border);
+  overflow-wrap: anywhere;
+}
+
+.lab-table th {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.lab-table .pass {
+  color: var(--ok);
+  font-weight: 700;
+}
+
+.lab-table .fail {
+  color: var(--error);
+  font-weight: 700;
+}
 
 footer {
   margin-top: 2rem;

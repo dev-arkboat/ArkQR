@@ -97,6 +97,16 @@
       >
         Receive
       </button>
+      <button
+        id="tab-lab"
+        role="tab"
+        aria-selected="false"
+        aria-controls="panel-lab"
+        type="button"
+        tabindex="-1"
+      >
+        Lab
+      </button>
     </nav>
 
     <main id="main">
@@ -397,6 +407,100 @@
           </div>
           <p>SHA-256 verified. <span id="rx-hash" class="mono"></span></p>
           <a id="rx-download" class="btn-primary" href="#">Download file</a>
+        </div>
+      </section>
+
+      <section id="panel-lab" role="tabpanel" aria-labelledby="tab-lab" hidden>
+        <h2>Color probe</h2>
+        <p class="hint">
+          Experiment: can pure red/green/blue carry data screen-to-camera? Show these
+          patches fullscreen on the sender, point this camera at one patch, capture
+          samples, and read the verdict. Tight separable hues mean color could work;
+          smeared hues mean physics says no — in this lighting, on these devices.
+        </p>
+        <ol class="steps" aria-label="How the probe works">
+          <li><span class="step-n">1</span> Show patches fullscreen</li>
+          <li><span class="step-n">2</span> Sample each with camera</li>
+          <li><span class="step-n">3</span> Read the verdict</li>
+        </ol>
+
+        <div class="swatches" aria-label="Reference patches (emitted colors)">
+          <figure class="swatch">
+            <span class="sw-color sw-white" aria-hidden="true"></span>
+            <figcaption>white <span class="mono">255,255,255</span></figcaption>
+          </figure>
+          <figure class="swatch">
+            <span class="sw-color sw-black" aria-hidden="true"></span>
+            <figcaption>black <span class="mono">0,0,0</span></figcaption>
+          </figure>
+          <figure class="swatch">
+            <span class="sw-color sw-red" aria-hidden="true"></span>
+            <figcaption>red <span class="mono">255,0,0</span></figcaption>
+          </figure>
+          <figure class="swatch">
+            <span class="sw-color sw-green" aria-hidden="true"></span>
+            <figcaption>green <span class="mono">0,255,0</span></figcaption>
+          </figure>
+          <figure class="swatch">
+            <span class="sw-color sw-blue" aria-hidden="true"></span>
+            <figcaption>blue <span class="mono">0,0,255</span></figcaption>
+          </figure>
+        </div>
+
+        <div class="button-row">
+          <button id="lab-start" class="btn-primary" type="button">Start camera</button>
+          <button id="lab-stop" type="button" disabled>Stop</button>
+          <button id="lab-reset" type="button">Clear samples</button>
+        </div>
+        <p id="lab-error" class="error" role="alert" hidden></p>
+
+        <div class="video-wrap video-wrap-small">
+          <video
+            id="lab-video"
+            playsinline
+            muted
+            aria-label="Probe camera preview"
+          ></video>
+          <canvas id="lab-canvas" class="visually-hidden" aria-hidden="true"></canvas>
+        </div>
+
+        <div class="card">
+          <p class="card-label">Sampler (frame center)</p>
+          <p id="lab-readout" class="mono">Camera off.</p>
+          <div class="field-row">
+            <div class="field">
+              <label for="lab-color">Patch in view</label>
+              <select id="lab-color">
+                <option value="white">white</option>
+                <option value="black">black</option>
+                <option value="red" selected>red</option>
+                <option value="green">green</option>
+                <option value="blue">blue</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="lab-capture">Capture</label>
+              <button id="lab-capture" type="button" disabled>Capture sample</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <p class="card-label">Verdict (3+ samples per color to judge)</p>
+          <table class="lab-table">
+            <thead>
+              <tr>
+                <th scope="col">Patch</th>
+                <th scope="col">Samples</th>
+                <th scope="col">Received mean</th>
+                <th scope="col">Reads as</th>
+                <th scope="col">Margin</th>
+                <th scope="col">Verdict</th>
+              </tr>
+            </thead>
+            <tbody id="lab-results"></tbody>
+          </table>
+          <p id="lab-verdict" class="hint" role="status"></p>
         </div>
       </section>
     </main>
