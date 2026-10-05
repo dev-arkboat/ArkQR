@@ -10,6 +10,9 @@ export interface QrMatrix {
   dark: (row: number, col: number) => boolean;
 }
 
+/** Offered correction levels. M is sturdy; L packs the same bytes smaller. */
+export type EcLevel = 'L' | 'M';
+
 /** Frame bytes -> latin-1 string, chunked to avoid arg-list limits. */
 export function bytesToLatin1(bytes: Uint8Array): string {
   const CHUNK = 8192;
@@ -27,9 +30,9 @@ export function latin1ToBytes(s: string): Uint8Array {
   return out;
 }
 
-/** Encode one frame as a binary (byte-mode) QR symbol, EC level M, auto version. */
-export function encodeToMatrix(payload: Uint8Array): QrMatrix {
-  const qr = qrcode(0, 'M');
+/** Encode one frame as a binary (byte-mode) QR symbol, auto version. */
+export function encodeToMatrix(payload: Uint8Array, ecLevel: EcLevel = 'M'): QrMatrix {
+  const qr = qrcode(0, ecLevel);
   qr.addData(bytesToLatin1(payload), 'Byte');
   qr.make();
   return {

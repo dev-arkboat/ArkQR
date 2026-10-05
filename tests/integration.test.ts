@@ -72,6 +72,21 @@ describe('QR byte fidelity', () => {
     expect(back).toEqual(frame);
   });
 
+  it('level L packs the same bytes into a smaller symbol that still decodes', () => {
+    const payload = pseudoRandomBytes(DENSITY_PRESETS.max.blockSize, 57);
+    const frame = encodeDataFrame(new Uint8Array([1, 2, 3, 4]), 79, payload);
+    const mLevel = encodeToMatrix(frame, 'M');
+    const lLevel = encodeToMatrix(frame, 'L');
+    expect(lLevel.size).toBeLessThan(mLevel.size);
+    console.info(
+      `Max frame versions: M=${mLevel.size} modules, L=${lLevel.size} modules`,
+    );
+    const { width, height, data } = matrixToPixels(lLevel, 3);
+    const found = jsQR(data, width, height);
+    expect(found).not.toBeNull();
+    expect(Uint8Array.from(found?.binaryData ?? [])).toEqual(frame);
+  });
+
   it('metadata frame survives QR round-trip', () => {
     const meta: MetadataPayload = {
       sessionId: new Uint8Array([10, 20, 30, 40]),

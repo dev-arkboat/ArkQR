@@ -228,6 +228,27 @@
             Ink is appearance only — same data, decoded by brightness. Green is lightest;
             test it with your phones before relying on it.
           </p>
+          <p class="card-label">Error correction</p>
+          <div
+            class="segment segment-auto"
+            role="group"
+            aria-label="Error correction level"
+          >
+            <label class="seg-option"
+              ><input type="radio" name="ec" id="ec-m" value="m" checked />
+              <span class="seg-name">Sturdy</span>
+              <span class="seg-sub">level M · default</span></label
+            >
+            <label class="seg-option"
+              ><input type="radio" name="ec" id="ec-l" value="l" />
+              <span class="seg-name">Compact</span>
+              <span class="seg-sub">level L · smaller symbols</span></label
+            >
+          </div>
+          <p class="hint">
+            Same bytes, smaller QR — easier to scan at distance. Lost frames are absorbed
+            by the fountain code, so lower correction stays safe.
+          </p>
           <div class="field-row">
             <div class="field">
               <label for="fps-slider"

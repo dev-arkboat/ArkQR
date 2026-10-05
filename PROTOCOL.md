@@ -150,9 +150,13 @@ Receivers lock to the first `sessionId` seen and ignore others until reset.
 
 - Each frame is encoded as **one binary (byte-mode) QR symbol**, raw bytes, no
   base64.
-- Error correction level **M**, auto-selected version (0 = auto) fitting the
-  frame. Max data-frame on the wire is `1400 + 16 = 1416` bytes ≪ 2331-byte
-  version-40-M capacity.
+- Error correction level **M** by default, **L** as a sender option. L packs the
+  same bytes into a smaller symbol (measured: 1416 B → 141 modules at M,
+  125 at L), which scans easier/farther. Dropped frames are absorbed by the
+  fountain code, so the weaker per-symbol correction stays safe. Receivers
+  decode either level transparently — EC is not part of the frame format.
+  Largest data-frame on the wire is `2000 + 16 = 2016` bytes (version 38),
+  inside the 2331-byte version-40-M capacity.
 - Rendered large on `<canvas>`: white background, dark modules, quiet zone ≥ 4
   modules, integer pixel scaling, `image-rendering: pixelated`.
 - Module ink (black / pure red / green / blue) is presentation only: decoders

@@ -2,7 +2,7 @@
 // background, proper quiet zone, integer scaling. The QR stream is the one
 // intentionally animated surface (exempt from prefers-reduced-motion).
 
-import { encodeToMatrix, type QrMatrix } from './matrix.js';
+import { encodeToMatrix, type EcLevel, type QrMatrix } from './matrix.js';
 
 export type InkName = 'black' | 'red' | 'green' | 'blue';
 
@@ -33,6 +33,7 @@ export interface PaintOptions {
   quietModules?: number;
   foreground?: string;
   background?: string;
+  ecLevel?: EcLevel;
 }
 
 /** Paint a precomputed matrix onto a canvas, sizing the canvas to fit. */
@@ -70,7 +71,7 @@ export function paintFrame(
   payload: Uint8Array,
   opts: PaintOptions = {},
 ): QrMatrix {
-  const matrix = encodeToMatrix(payload);
+  const matrix = encodeToMatrix(payload, opts.ecLevel ?? 'M');
   paintMatrix(canvas, matrix, opts);
   return matrix;
 }
