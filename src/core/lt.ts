@@ -62,7 +62,16 @@ export function encodeBlock(
 
 export type AddStatus = 'stored' | 'duplicate' | 'already-complete';
 
+/**
+ * Cap on stored equations: the stream is endless and every draw is i.i.d.,
+ * so a sliding window of recent equations plus all resolved blocks keeps
+ * decoding convergent while bounding memory (and per-decode() CPU). Small
+ * transfers never hit the cap; only huge ones prune.
+ */
+export const MAX_STORED_EQUATIONS = 65536;
+
 interface Equation {
+  seed: number;
   neighbors: number[];
   payload: Uint8Array;
 }
@@ -76,6 +85,7 @@ export class LtDecoder {
   private readonly seenSeeds = new Set<number>();
   private readonly resolved: (Uint8Array | null)[];
   private resolvedCount = 0;
+  private readonly equationCap: number;
 
   constructor(
     readonly blockCount: number,
@@ -88,6 +98,7 @@ export class LtDecoder {
       throw new Error(`invalid blockSize ${blockSize}`);
     }
     this.resolved = new Array<Uint8Array | null>(blockCount).fill(null);
+    this.equationCap = Math.min(4 * blockCount + 1024, MAX_STORED_EQUATIONS);
   }
 
   get isComplete(): boolean {
@@ -110,8 +121,17 @@ export class LtDecoder {
     if (this.seenSeeds.has(seed)) return 'duplicate';
     this.seenSeeds.add(seed);
     const neighbors = Array.from(neighborsForSeed(seed >>> 0, this.blockCount));
-    this.equations.push({ neighbors, payload: payload.slice() });
+    this.equations.push({ seed: seed >>> 0, neighbors, payload: payload.slice() });
+    this.prune();
     return 'stored';
+  }
+
+  /** Drop oldest equations past the cap (draws are i.i.d.; recents suffice). */
+  private prune(): void {
+    if (this.equations.length <= this.equationCap) return;
+    const drop = this.equations.length - this.equationCap;
+    const removed = this.equations.splice(0, drop);
+    for (const eq of removed) this.seenSeeds.delete(eq.seed);
   }
 
   /**

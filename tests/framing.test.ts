@@ -94,6 +94,20 @@ describe('framing', () => {
     expect(() => encodeMetadataFrame(meta3)).toThrow();
   });
 
+  it('caps are coherent: 1 GiB at 64 B blocks validates with no allocation', () => {
+    const oneGiB = MAX_FILE_BYTES;
+    const meta = {
+      ...sampleMeta(),
+      originalSize: oneGiB,
+      compressedSize: oneGiB,
+      blockSize: 64,
+      blockCount: oneGiB / 64,
+    };
+    const bytes = encodeMetadataFrame(meta);
+    const res = decodeFrame(bytes);
+    expect(res.ok).toBe(true);
+  });
+
   it('rejects inconsistent blockCount', () => {
     // compressedSize 1000 / blockSize 256 -> K must be 4.
     const meta = { ...sampleMeta(), blockCount: 5 };

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { LtDecoder, cdfFor, encodeBlock, neighborsForSeed } from '../src/core/lt.js';
+import {
+  LtDecoder,
+  MAX_STORED_EQUATIONS,
+  cdfFor,
+  encodeBlock,
+  neighborsForSeed,
+} from '../src/core/lt.js';
 import { joinBlocks, splitBlocks } from '../src/core/protocol.js';
 import { mulberry32 } from '../src/core/prng.js';
 import { pseudoRandomBytes, shuffled } from './util.js';
@@ -210,5 +216,36 @@ describe('Gauss-Jordan fallback', () => {
     const out = decoder.decode();
     expect(out).not.toBeNull();
     expect(joinBlocks(out ?? [], payload.length)).toEqual(payload);
+  });
+});
+
+describe('decoder memory window', () => {
+  it('bounds stored equations while still decoding huge streams', () => {
+    const K = 100;
+    const blockSize = 64;
+    const payload = pseudoRandomBytes(K * blockSize, 314);
+    const blocks = splitBlocks(payload, blockSize);
+    const decoder = new LtDecoder(K, blockSize);
+    // 20k unique frames: far past the 4*K+1024 window.
+    for (let seed = 1; seed <= 20000; seed++) {
+      decoder.addFrame(seed, encodeBlock(blocks, seed, blockSize));
+    }
+    expect(decoder.equationCount).toBeLessThanOrEqual(4 * K + 1024);
+    expect(decoder.equationCount).toBeLessThanOrEqual(MAX_STORED_EQUATIONS);
+    const out = decoder.decode();
+    expect(out).not.toBeNull();
+    expect(joinBlocks(out ?? [], payload.length)).toEqual(payload);
+  });
+});
+
+describe('splitBlocks views', () => {
+  it('shares memory for full blocks, copies only the padded tail', () => {
+    const payload = pseudoRandomBytes(1025, 99);
+    const blocks = splitBlocks(payload, 512);
+    expect(blocks).toHaveLength(3);
+    expect(blocks[0].buffer).toBe(payload.buffer);
+    expect(blocks[1].buffer).toBe(payload.buffer);
+    expect(blocks[2].buffer).not.toBe(payload.buffer); // padded copy
+    expect(joinBlocks(blocks, payload.length)).toEqual(payload);
   });
 });

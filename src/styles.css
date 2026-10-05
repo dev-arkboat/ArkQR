@@ -375,6 +375,10 @@ h3 {
   align-items: end;
 }
 
+.field-row.single {
+  grid-template-columns: 1fr;
+}
+
 .field label {
   display: block;
   font-weight: 600;

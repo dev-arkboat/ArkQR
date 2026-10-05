@@ -28,7 +28,11 @@ export interface PreparedTransfer {
   sessionId: Uint8Array;
 }
 
-/** Split into fixed-size blocks, zero-padding the last one. */
+/**
+ * Split into fixed-size blocks. Full blocks are zero-copy views into `data`
+ * (encoders only read); just the short tail is copied for zero padding.
+ * This keeps sender-side memory near 1x file size instead of 2x.
+ */
 export function splitBlocks(data: Uint8Array, blockSize: number): Uint8Array[] {
   if (!Number.isInteger(blockSize) || blockSize <= 0) {
     throw new Error(`invalid blockSize ${blockSize}`);
@@ -36,9 +40,15 @@ export function splitBlocks(data: Uint8Array, blockSize: number): Uint8Array[] {
   const count = Math.ceil(data.length / blockSize);
   const blocks: Uint8Array[] = new Array<Uint8Array>(count);
   for (let i = 0; i < count; i++) {
-    const b = new Uint8Array(blockSize);
-    b.set(data.subarray(i * blockSize, (i + 1) * blockSize), 0);
-    blocks[i] = b;
+    const start = i * blockSize;
+    const end = Math.min(start + blockSize, data.length);
+    if (end - start === blockSize) {
+      blocks[i] = data.subarray(start, end);
+    } else {
+      const tail = new Uint8Array(blockSize);
+      tail.set(data.subarray(start, end), 0);
+      blocks[i] = tail;
+    }
   }
   return blocks;
 }
@@ -111,7 +121,8 @@ export function formatBytes(n: number): string {
   if (!Number.isFinite(n)) return '—';
   if (n < 1024) return `${n} B`;
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  return `${(n / (1024 * 1024)).toFixed(2)} MB`;
+  if (n < 1024 * 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(n / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
 export function formatEta(totalSeconds: number): string {

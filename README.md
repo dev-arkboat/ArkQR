@@ -93,7 +93,7 @@ watches intake live and tells you what to change on the sender.
 accounts. Files are read locally, encoded locally, and scanned optically.
 The service worker only caches the app shell for offline use. Received
 content is treated as untrusted: lengths are validated before allocation
-(32 MB / 16384-block caps), filenames are sanitized, content is never
+(1 GiB / 16M-block protocol bounds, sliding equation window), filenames are sanitized, content is never
 executed or rendered — only offered as a download.
 
 ## Dependencies (justified)

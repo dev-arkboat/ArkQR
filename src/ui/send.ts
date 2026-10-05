@@ -82,7 +82,6 @@ export class SendController {
     warn: el<HTMLParagraphElement>('send-warn'),
     fpsSlider: el<HTMLInputElement>('fps-slider'),
     fpsValue: el<HTMLElement>('fps-value'),
-    capInput: el<HTMLInputElement>('cap-input'),
     play: el<HTMLButtonElement>('play-btn'),
     fullscreen: el<HTMLButtonElement>('fullscreen-btn'),
     reset: el<HTMLButtonElement>('send-reset-btn'),
@@ -181,16 +180,10 @@ export class SendController {
     this.refreshEta();
   }
 
-  private capBytes(): number {
-    const mb = Math.max(1, Math.min(32, Math.floor(Number(this.ui.capInput.value) || 5)));
-    return Math.min(mb * 1024 * 1024, MAX_FILE_BYTES);
-  }
-
   async setFile(file: File, note?: string): Promise<void> {
-    const cap = this.capBytes();
-    if (file.size > cap) {
+    if (file.size > MAX_FILE_BYTES) {
       this.setStatus(
-        `File too large: ${formatBytes(file.size)} exceeds the ${formatBytes(cap)} cap. Raise the cap or pick a smaller file.`,
+        `File too large: ${formatBytes(file.size)} exceeds the ${formatBytes(MAX_FILE_BYTES)} safety bound.`,
       );
       return;
     }
@@ -278,7 +271,11 @@ export class SendController {
       return;
     }
     const secs = estimateSeconds(this.info.blockCount, this.fps);
-    if (secs > 300) {
+    const size = this.info.originalSize;
+    if (size > 200 * 1024 * 1024) {
+      this.ui.warn.hidden = false;
+      this.ui.warn.textContent = `Very large file (${formatBytes(size)}): needs roughly that much free RAM on BOTH devices and ${formatEta(secs)} of steady scanning. Phones may run out of memory — prefer a desktop receiver.`;
+    } else if (secs > 300) {
       this.ui.warn.hidden = false;
       this.ui.warn.textContent = `Long transfer: estimated ${formatEta(secs)} at ${this.fps} fps. Try a denser preset or a higher speed — scanning stays reliable only if the receiver keeps up.`;
     } else {

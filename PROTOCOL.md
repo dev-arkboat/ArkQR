@@ -138,7 +138,7 @@ every preceding byte of the frame. Receivers **silently drop** CRC failures.
 
 Validation (receivers treat scanned bytes as untrusted): verify
 `magic`/`version`, exact/consistent lengths before allocating anything, enforce
-`origSize, compSize ≤ MAX_FILE_BYTES` (32 MiB), `K ≤ MAX_BLOCKS` (16384),
+`origSize, compSize ≤ MAX_FILE_BYTES` (1 GiB), `K ≤ MAX_BLOCKS` (16777216),
 `K == ceil(compSize/blockSize)`, `blockSize` within `[64, 2048]`, filename/MIME
 length caps. Sanitized filename: strip path separators and control characters.
 
@@ -227,6 +227,23 @@ Goodput ≈ `blockSize × fps / (1 + overhead)`. At the 12 fps default on Balanc
 Honest real-world range is
 **5–30 KB/s** depending on preset, fps, device focus speed and steadiness.
 The sender shows an estimated time from `K × 1.35 / fps`.
+
+## Scaling: why there is no size cap (and what bounds you instead)
+
+There is deliberately no sender-side file cap — only the 1 GiB protocol
+safety bound, which exists to stop _malicious_ frames from forcing
+gigabyte allocations on the receiver, not to limit legitimate files.
+What actually bounds big transfers:
+
+- **RAM ≈ 2–3× file size on both devices.** The sender holds the file plus
+  chunk views (blocks alias the payload; only the padded tail is copied).
+  The receiver holds resolved blocks plus a sliding window of at most
+  65536 recent equations (older ones are pruned with their seeds — draws
+  are i.i.d., so recent frames plus resolved blocks keep decoding
+  convergent). Phones realistically top out around 100–300 MB; desktops
+  go further.
+- **Time.** At 5–20 KB/s, 100 MB needs 1.5–5 hours of steady scanning.
+  The sender warns past 5 minutes and strongly past 200 MB.
 
 ## 9. Future extension: passphrase encryption
 

@@ -27,9 +27,9 @@ export const MAX_FILE_NAME_BYTES = 255;
 /** Upper bound for UTF-8 encoded MIME types accepted on the wire. */
 export const MAX_MIME_BYTES = 128;
 /** Hard cap: no transfer may declare more payload than this. */
-export const MAX_FILE_BYTES = 32 * 1024 * 1024;
+export const MAX_FILE_BYTES = 1024 * 1024 * 1024;
 /** Hard cap on source block count (bounds decoder memory). */
-export const MAX_BLOCKS = 16384;
+export const MAX_BLOCKS = 16777216;
 /** Smallest sane block size (header efficiency + QR capacity). */
 export const MIN_BLOCK_SIZE = 64;
 /** Largest block size: 2048 + 16 header bytes still fits QR version 40-M. */

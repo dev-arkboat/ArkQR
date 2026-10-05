@@ -274,26 +274,19 @@
               absorbed by the fountain code, so lower correction stays safe.
             </p>
           </div>
-          <div class="field-row">
+          <div class="field-row single">
             <div class="field">
               <label for="fps-slider"
                 >Speed <output id="fps-value" for="fps-slider">12 fps</output></label
               >
               <input id="fps-slider" type="range" min="1" max="30" step="1" value="12" />
             </div>
-            <div class="field field-narrow">
-              <label for="cap-input">Size cap (MB)</label>
-              <input
-                id="cap-input"
-                type="number"
-                min="1"
-                max="32"
-                step="1"
-                value="5"
-                inputmode="numeric"
-              />
-            </div>
           </div>
+          <p class="hint">
+            No size cap: any file up to the 1 GiB safety bound streams. Big files need
+            patience (minutes to hours) and free RAM around 2–3× the file size on both
+            devices.
+          </p>
         </form>
 
         <div class="button-row">
