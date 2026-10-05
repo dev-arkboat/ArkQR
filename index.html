@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="description" content="ArkQR: send files between devices with animated QR codes. No network, no uploads, fully offline." />
+    <meta name="theme-color" content="#0b1020" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="./icon.svg" />
+    <!-- Strict CSP: everything is same-origin; downloads/recordings use blob: URLs. -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self'; worker-src 'self' blob:; base-uri 'self'; form-action 'none'; frame-ancestors 'none'"
+    />
+    <title>ArkQR — offline file transfer via QR</title>
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to main content</a>
+    <header class="topbar">
+      <h1>ArkQR</h1>
+      <p class="tagline">Files over QR. No network. Nothing leaves your devices.</p>
+      <div class="topbar-actions">
+        <button id="theme-toggle" type="button" aria-pressed="false">Dark mode</button>
+      </div>
+    </header>
+
+    <nav class="tabs" role="tablist" aria-label="Mode">
+      <button id="tab-send" role="tab" aria-selected="true" aria-controls="panel-send" type="button">
+        Send
+      </button>
+      <button id="tab-receive" role="tab" aria-selected="false" aria-controls="panel-receive" type="button" tabindex="-1">
+        Receive
+      </button>
+    </nav>
+
+    <main id="main">
+      <section id="panel-send" role="tabpanel" aria-labelledby="tab-send">
+        <h2>Send a file</h2>
+
+        <div
+          id="drop-zone"
+          class="drop-zone"
+          role="button"
+          tabindex="0"
+          aria-label="Choose a file to send. Activate to open the file picker, or drop a file here."
+        >
+          <p>Drop a file here or <span class="linklike">choose one</span></p>
+          <p class="hint">Stays on this device. Nothing is uploaded.</p>
+        </div>
+        <input id="file-input" type="file" class="visually-hidden" aria-label="Choose a file to send" />
+
+        <div id="file-info" class="card" hidden>
+          <dl>
+            <div><dt>Name</dt><dd id="send-filename">—</dd></div>
+            <div><dt>Size</dt><dd id="send-filesize">—</dd></div>
+            <div><dt>Estimated time</dt><dd id="send-eta">—</dd></div>
+            <div><dt>Frames sent</dt><dd id="frames-sent">0</dd></div>
+          </dl>
+          <p id="send-warn" class="warn" hidden></p>
+        </div>
+
+        <form id="send-settings" class="card" aria-label="Send settings">
+          <fieldset>
+            <legend>QR density</legend>
+            <label><input type="radio" name="density" id="preset-reliable" value="reliable" /> Reliable <span class="hint">256 B — easiest to scan</span></label>
+            <label><input type="radio" name="density" id="preset-balanced" value="balanced" checked /> Balanced <span class="hint">512 B — default</span></label>
+            <label><input type="radio" name="density" id="preset-fast" value="fast" /> Fast <span class="hint">800 B — needs steady hands</span></label>
+          </fieldset>
+          <label for="fps-slider">Speed: <output id="fps-value" for="fps-slider">8 fps</output></label>
+          <input id="fps-slider" type="range" min="1" max="30" step="1" value="8" />
+          <label for="cap-input">Size cap (MB, max 32)</label>
+          <input id="cap-input" type="number" min="1" max="32" step="1" value="5" inputmode="numeric" />
+        </form>
+
+        <div class="button-row">
+          <button id="play-btn" type="button" disabled>Pause</button>
+          <button id="fullscreen-btn" type="button" disabled>Fullscreen</button>
+          <button id="send-reset-btn" type="button" disabled>Reset</button>
+        </div>
+
+        <div id="qr-wrap" class="qr-wrap">
+          <canvas id="qr-canvas" width="640" height="640" aria-label="Animated QR code stream" role="img"></canvas>
+        </div>
+        <p id="send-status" class="status" role="status">Choose a file to begin.</p>
+
+        <div class="card">
+          <h3>Export as video (optional)</h3>
+          <p class="hint">
+            Records the QR stream with MediaRecorder at a fixed high bitrate. Limitation:
+            video compression can blur QR modules, so a recording may scan worse than the
+            live screen. Play it back from a good-quality source, fullscreen, at native
+            resolution.
+          </p>
+          <div class="button-row">
+            <button id="export-btn" type="button" disabled>Record video</button>
+            <button id="export-stop-btn" type="button" disabled>Stop</button>
+          </div>
+          <p id="export-status" class="status" role="status"></p>
+          <a id="export-download" class="linklike" hidden href="#">Download recording</a>
+        </div>
+      </section>
+
+      <section id="panel-receive" role="tabpanel" aria-labelledby="tab-receive" hidden>
+        <h2>Receive a file</h2>
+        <p class="hint">Point your camera at the sender's screen. Needs HTTPS or localhost for camera access.</p>
+
+        <ul id="rx-support" class="support-list" aria-label="Browser capability check"></ul>
+
+        <form class="card" aria-label="Receive settings">
+          <label for="decoder-mode">Decoder</label>
+          <select id="decoder-mode">
+            <option value="auto" selected>Auto (native → jsQR fallback)</option>
+            <option value="native">Native BarcodeDetector only</option>
+            <option value="jsqr">jsQR only</option>
+          </select>
+          <label class="inline"><input id="rx-beep" type="checkbox" checked /> Sound + vibration on events</label>
+        </form>
+
+        <div class="button-row">
+          <button id="cam-start" type="button">Start camera</button>
+          <button id="cam-stop" type="button" disabled>Stop</button>
+          <button id="rx-reset" type="button">Reset</button>
+        </div>
+
+        <div class="video-wrap">
+          <video id="rx-video" playsinline muted aria-label="Camera preview"></video>
+          <canvas id="rx-canvas" class="visually-hidden" aria-hidden="true"></canvas>
+        </div>
+
+        <div class="card" aria-live="polite">
+          <dl>
+            <div><dt>File</dt><dd id="rx-filename">—</dd></div>
+            <div><dt>Progress</dt><dd><span id="rx-percent">0%</span> <span id="rx-blocks">(0/— blocks)</span></dd></div>
+            <div><dt>Accepted</dt><dd id="rx-accepted">0</dd></div>
+            <div><dt>Rejected (CRC)</dt><dd id="rx-rejected">0</dd></div>
+            <div><dt>Duplicates</dt><dd id="rx-duplicates">0</dd></div>
+            <div><dt>Remaining (est.)</dt><dd id="rx-eta">—</dd></div>
+            <div><dt>Session</dt><dd id="rx-session">—</dd></div>
+          </dl>
+          <div class="progress"><div id="rx-progress-bar" class="progress-bar" style="width: 0%"></div></div>
+          <p id="rx-warning" class="warn" hidden></p>
+          <p id="rx-error" class="error" role="alert" hidden></p>
+        </div>
+
+        <div id="rx-done" class="card success" hidden>
+          <h3>Transfer complete</h3>
+          <p>SHA-256 verified. <span id="rx-hash"></span></p>
+          <a id="rx-download" href="#">Download file</a>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <p>
+        ArkQR works fully offline after first load. Files never leave your devices.
+        See <span class="mono">PROTOCOL.md</span> for the transfer spec.
+      </p>
+    </footer>
+
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>
