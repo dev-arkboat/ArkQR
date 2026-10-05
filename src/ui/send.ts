@@ -50,7 +50,7 @@ export class SendController {
   private stream: FrameStream | null = null;
   private info: TransferInfo | null = null;
   private playing = false;
-  private fps = 8;
+  private fps = 10;
   private rafId = 0;
   private lastTick = 0;
   private framesSent = 0;

@@ -115,7 +115,7 @@ export async function nativeDetectorSupported(): Promise<boolean> {
   return formats === null ? true : formats.includes('qr_code');
 }
 
-const SCAN_INTERVAL_MS = 120;
+const SCAN_INTERVAL_MS = 80;
 const MAX_NATIVE_DUDS = 30;
 const JSQR_MAX_DIM = 960;
 

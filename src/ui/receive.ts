@@ -59,6 +59,7 @@ export class ReceiveController {
   private lastDecodeAt = 0;
   private firstFrameAt = 0;
   private done = false;
+  private lastTip = '';
   private downloadUrl: string | null = null;
 
   private readonly ui = {
@@ -83,6 +84,8 @@ export class ReceiveController {
     rejected: el<HTMLElement>('rx-rejected'),
     duplicates: el<HTMLElement>('rx-duplicates'),
     eta: el<HTMLElement>('rx-eta'),
+    rate: el<HTMLElement>('rx-rate'),
+    tip: el<HTMLParagraphElement>('rx-tip'),
     session: el<HTMLElement>('rx-session'),
     bar: el<HTMLDivElement>('rx-progress-bar'),
     warning: el<HTMLParagraphElement>('rx-warning'),
@@ -240,6 +243,9 @@ export class ReceiveController {
     this.hideError();
     this.hideWarning();
     this.ui.photoStatus.textContent = '';
+    this.ui.rate.textContent = '—';
+    this.ui.tip.textContent = '';
+    this.lastTip = '';
     this.renderProgress();
     this.ui.fileName.textContent = '—';
     this.ui.session.textContent = '—';
@@ -419,6 +425,40 @@ export class ReceiveController {
     this.ui.rejected.textContent = String(this.rejected);
     this.ui.duplicates.textContent = String(this.duplicates);
     this.ui.eta.textContent = this.estimateEta(resolved, total);
+    this.renderRateAndTip();
+  }
+
+  /** Live intake rate plus one actionable tip when the transfer is slow. */
+  private renderRateAndTip(): void {
+    if (this.firstFrameAt === 0) {
+      this.ui.rate.textContent = '—';
+      return;
+    }
+    const elapsed = (performance.now() - this.firstFrameAt) / 1000;
+    if (elapsed < 1) return;
+    const fps = this.accepted / elapsed;
+    const blockSize = this.meta?.blockSize ?? 0;
+    this.ui.rate.textContent =
+      blockSize > 0
+        ? `${fps.toFixed(1)} f/s · ${((fps * blockSize) / 1024).toFixed(1)} KB/s`
+        : `${fps.toFixed(1)} f/s`;
+
+    const total = this.accepted + this.rejected + this.duplicates;
+    let tip = '';
+    if (elapsed > 5 && total > 10 && this.rejected / total > 0.2) {
+      tip =
+        'Many frames are failing checks — move closer, raise sender brightness, and hold both devices steady.';
+    } else if (elapsed > 10 && this.accepted > 0 && fps < 2) {
+      tip =
+        'Slow intake — raise the sender Speed slider, switch density to Fast, or move closer so the QR fills the frame.';
+    } else if (elapsed > 10 && this.accepted === 0) {
+      tip =
+        'No usable frames yet — is the sender screen showing the animated QR? Try “Scan from photo” with a screenshot to test the pipeline.';
+    }
+    if (tip !== this.lastTip) {
+      this.lastTip = tip;
+      this.ui.tip.textContent = tip;
+    }
   }
 
   private estimateEta(resolved: number, total: number): string {

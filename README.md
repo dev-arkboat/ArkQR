@@ -43,10 +43,11 @@ auto version. Full spec: [`PROTOCOL.md`](./PROTOCOL.md).
 
 Goodput ≈ `blockSize × fps / overhead`. Realistic measured range is
 **~5–30 KB/s** depending on preset, fps, camera focus speed and how steady
-your hands are. Examples at 8 fps: Reliable (256 B) ≈ 1.7 KB/s → 1 MB ≈
-10 min; Balanced (512 B, default) ≈ 3.4 KB/s → 1 MB ≈ 5 min; Fast (800 B)
-≈ 5 KB/s → 1 MB ≈ 3.5 min. This is a sneakernet for keys, documents and
-photos — not movies.
+your hands are. Examples at the 10 fps default: Reliable (256 B) ≈ 2.1 KB/s
+→ 1 MB ≈ 8 min; Balanced (512 B, default) ≈ 4.3 KB/s → 1 MB ≈ 4 min; Fast
+(800 B) ≈ 6.7 KB/s → 1 MB ≈ 2.5 min. The RECEIVE tab shows a live intake
+rate — below ~2 frames/s, raise sender Speed, switch to Fast density, or move
+closer. This is a sneakernet for keys, documents and photos — not movies.
 
 ## Tips for reliable scanning
 

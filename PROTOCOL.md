@@ -173,8 +173,8 @@ error, keep collecting (more frames cannot fix a hash mismatch of an already
 
 ## 8. Throughput model
 
-Goodput ≈ `blockSize × fps / (1 + overhead)`. At 8 fps Balanced:
-`512 × 8 / 1.2 ≈ 3.4 KB/s` → 1 MiB ≈ 5 min. Honest real-world range is
+Goodput ≈ `blockSize × fps / (1 + overhead)`. At the 10 fps default on Balanced:
+`512 × 10 / 1.2 ≈ 4.3 KB/s` → 1 MiB ≈ 4 min. Honest real-world range is
 **5–30 KB/s** depending on preset, fps, device focus speed and steadiness.
 The sender shows an estimated time from `K × 1.35 / fps`.
 

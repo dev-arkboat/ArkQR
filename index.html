@@ -184,9 +184,9 @@
           <div class="field-row">
             <div class="field">
               <label for="fps-slider"
-                >Speed <output id="fps-value" for="fps-slider">8 fps</output></label
+                >Speed <output id="fps-value" for="fps-slider">10 fps</output></label
               >
-              <input id="fps-slider" type="range" min="1" max="30" step="1" value="8" />
+              <input id="fps-slider" type="range" min="1" max="30" step="1" value="10" />
             </div>
             <div class="field field-narrow">
               <label for="cap-input">Size cap (MB)</label>
@@ -214,7 +214,7 @@
             <span id="send-live" class="live-badge" hidden
               ><span class="live-dot" aria-hidden="true"></span>LIVE</span
             >
-            <span id="stage-fps" class="hint mono">8 fps</span>
+            <span id="stage-fps" class="hint mono">10 fps</span>
           </div>
           <canvas
             id="qr-canvas"
@@ -357,7 +357,12 @@
               <span class="tile-label">Remaining (est.)</span>
               <span class="tile-value mono" id="rx-eta">—</span>
             </div>
+            <div class="tile">
+              <span class="tile-label">Intake rate</span>
+              <span class="tile-value mono" id="rx-rate">—</span>
+            </div>
           </div>
+          <p id="rx-tip" class="hint" role="status"></p>
           <p class="session-row hint mono">session <span id="rx-session">—</span></p>
           <p id="rx-warning" class="warn" hidden></p>
           <p id="rx-error" class="error" role="alert" hidden></p>
