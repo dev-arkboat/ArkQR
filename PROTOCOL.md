@@ -166,12 +166,13 @@ Receivers lock to the first `sessionId` seen and ignore others until reset.
 
 ## 6. Density presets
 
-| Preset             | `blockSize` | Wire bytes/frame | Notes                                         |
-| ------------------ | ----------- | ---------------- | --------------------------------------------- |
-| Reliable           | 256         | 272              | Smallest symbols, easiest to scan, slowest    |
-| Balanced (default) | 512         | 528              | Good middle ground                            |
-| Fast               | 800         | 816              | Larger symbols, needs a steady hand           |
-| Max                | 1400        | 1416             | Version-33 symbols, close range only, fastest |
+| Preset             | `blockSize` | Wire bytes/frame | Notes                                             |
+| ------------------ | ----------- | ---------------- | ------------------------------------------------- |
+| Reliable           | 256         | 272              | Smallest symbols, easiest to scan, slowest        |
+| Balanced (default) | 512         | 528              | Good middle ground                                |
+| Fast               | 800         | 816              | Larger symbols, needs a steady hand               |
+| Max                | 1400        | 1416             | Version-33 symbols, close range only, fastest     |
+| Ultra              | 2000        | 2016             | Version-38 symbols, closest range, most per frame |
 
 ## 7. Completion
 

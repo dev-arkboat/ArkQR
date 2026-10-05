@@ -248,7 +248,7 @@ export class SendController {
     const secs = estimateSeconds(this.info.blockCount, this.fps);
     if (secs > 300) {
       this.ui.warn.hidden = false;
-      this.ui.warn.textContent = `Long transfer: estimated ${formatEta(secs)} at ${this.fps} fps. Try the Fast or Max preset or a higher speed — scanning stays reliable only if the receiver keeps up.`;
+      this.ui.warn.textContent = `Long transfer: estimated ${formatEta(secs)} at ${this.fps} fps. Try a denser preset or a higher speed — scanning stays reliable only if the receiver keeps up.`;
     } else {
       this.ui.warn.hidden = true;
     }

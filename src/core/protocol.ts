@@ -13,6 +13,7 @@ export const DENSITY_PRESETS = {
   balanced: { blockSize: 512, label: 'Balanced' },
   fast: { blockSize: 800, label: 'Fast' },
   max: { blockSize: 1400, label: 'Max' },
+  ultra: { blockSize: 2000, label: 'Ultra' },
 } as const;
 
 export type DensityPreset = keyof typeof DENSITY_PRESETS;

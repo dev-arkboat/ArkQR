@@ -46,7 +46,7 @@ Goodput ≈ `blockSize × fps / overhead`. Realistic measured range is
 your hands are. Examples at the 12 fps default: Reliable (256 B) ≈ 2.6 KB/s
 → 1 MB ≈ 7 min; Balanced (512 B, default) ≈ 5.1 KB/s → 1 MB ≈ 3.5 min; Fast
 (800 B) ≈ 8 KB/s → 1 MB ≈ 2 min; Max (1400 B, close range) ≈ 14 KB/s → 1 MB
-≈ 75 s, 500 KB under a minute. The RECEIVE tab shows a live intake
+≈ 75 s; Ultra (2000 B, closest range) ≈ 20 KB/s → 1 MB ≈ 50 s. The RECEIVE tab shows a live intake
 rate — below ~2 frames/s, raise sender Speed, switch to Fast or Max density, or
 move closer. This is a sneakernet for keys, documents and photos — not movies.
 

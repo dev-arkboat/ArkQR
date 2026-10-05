@@ -60,6 +60,18 @@ describe('QR byte fidelity', () => {
     expect(back).toEqual(frame);
   });
 
+  it('carries an Ultra-density (2000 B) frame through QR', () => {
+    const payload = pseudoRandomBytes(DENSITY_PRESETS.ultra.blockSize, 56);
+    const frame = encodeDataFrame(new Uint8Array([1, 2, 3, 4]), 78, payload);
+    const matrix = encodeToMatrix(frame);
+    expect(matrix.size).toBeLessThanOrEqual(177);
+    console.info(
+      `Ultra frame: ${frame.length} bytes -> ${matrix.size}x${matrix.size} modules`,
+    );
+    const back = qrRoundTrip(frame);
+    expect(back).toEqual(frame);
+  });
+
   it('metadata frame survives QR round-trip', () => {
     const meta: MetadataPayload = {
       sessionId: new Uint8Array([10, 20, 30, 40]),

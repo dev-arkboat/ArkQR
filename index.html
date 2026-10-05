@@ -168,7 +168,7 @@
 
         <form id="send-settings" class="card" aria-label="Send settings">
           <p class="card-label">QR density</p>
-          <div class="segment segment-4" role="group" aria-label="QR density">
+          <div class="segment segment-auto" role="group" aria-label="QR density">
             <label class="seg-option"
               ><input type="radio" name="density" id="preset-reliable" value="reliable" />
               <span class="seg-name">Reliable</span>
@@ -193,11 +193,16 @@
             <label class="seg-option"
               ><input type="radio" name="density" id="preset-max" value="max" />
               <span class="seg-name">Max</span>
-              <span class="seg-sub">1400 B · close range</span></label
+              <span class="seg-sub">1400 B · close</span></label
+            >
+            <label class="seg-option"
+              ><input type="radio" name="density" id="preset-ultra" value="ultra" />
+              <span class="seg-name">Ultra</span>
+              <span class="seg-sub">2000 B · closest</span></label
             >
           </div>
           <p class="card-label">QR ink</p>
-          <div class="segment segment-4" role="group" aria-label="QR ink color">
+          <div class="segment segment-auto" role="group" aria-label="QR ink color">
             <label class="seg-option"
               ><input type="radio" name="ink" id="ink-black" value="black" checked />
               <span class="seg-name">Black</span>
