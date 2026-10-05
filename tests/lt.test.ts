@@ -34,7 +34,8 @@ function runToCompletion(
     }
   }
   const out = decoder.decode();
-  if (!out) throw new Error(`decoder stalled after ${used} frames for K=${blocks.length}`);
+  if (!out)
+    throw new Error(`decoder stalled after ${used} frames for K=${blocks.length}`);
   return { framesUsed: used };
 }
 
@@ -43,7 +44,8 @@ function expectRoundTrip(payload: Uint8Array, blockSize: number, seeds: number[]
   const { framesUsed } = runToCompletion(blocks, blockSize, seeds);
   const decoder = new LtDecoder(blocks.length, blockSize);
   const cdf = cdfFor(blocks.length);
-  for (let i = 0; i < framesUsed; i++) decoder.addFrame(seeds[i], encodeBlock(blocks, seeds[i], blockSize, cdf));
+  for (let i = 0; i < framesUsed; i++)
+    decoder.addFrame(seeds[i], encodeBlock(blocks, seeds[i], blockSize, cdf));
   const recovered = decoder.decode();
   expect(recovered).not.toBeNull();
   expect(joinBlocks(recovered ?? [], payload.length)).toEqual(payload);
@@ -99,7 +101,9 @@ describe('LT round trips (file sizes)', () => {
     const seeds = nextSeeds(blocks.length * 4, 22);
     const { framesUsed } = runToCompletion(blocks, 512, seeds);
     const overhead = framesUsed / blocks.length;
-    console.info(`100KB: K=${blocks.length} frames=${framesUsed} overhead=${overhead.toFixed(3)}`);
+    console.info(
+      `100KB: K=${blocks.length} frames=${framesUsed} overhead=${overhead.toFixed(3)}`,
+    );
     expect(overhead).toBeLessThanOrEqual(2.0);
   });
 
@@ -109,7 +113,9 @@ describe('LT round trips (file sizes)', () => {
     const seeds = nextSeeds(Math.ceil(blocks.length * 2.5) + 64, 32);
     const { framesUsed } = runToCompletion(blocks, 512, seeds, 64);
     const overhead = framesUsed / blocks.length;
-    console.info(`2MB: K=${blocks.length} frames=${framesUsed} overhead=${overhead.toFixed(3)}`);
+    console.info(
+      `2MB: K=${blocks.length} frames=${framesUsed} overhead=${overhead.toFixed(3)}`,
+    );
     expect(overhead).toBeLessThanOrEqual(2.0);
   });
 });
@@ -168,7 +174,8 @@ describe('LT loss simulation (100 KB, blockSize 512)', () => {
     const decoder = new LtDecoder(K, BLOCK_SIZE);
     const cdf = cdfFor(K);
     // First trickle: far too few frames to complete.
-    for (let i = 0; i < 10; i++) decoder.addFrame(seeds[i], encodeBlock(BLOCKS, seeds[i], BLOCK_SIZE, cdf));
+    for (let i = 0; i < 10; i++)
+      decoder.addFrame(seeds[i], encodeBlock(BLOCKS, seeds[i], BLOCK_SIZE, cdf));
     expect(decoder.decode()).toBeNull();
     // Rest of the stream, decoding every 16 frames.
     let result: Uint8Array[] | null = null;
@@ -198,7 +205,8 @@ describe('Gauss-Jordan fallback', () => {
     }
     expect(chosen.length).toBe(24);
     const decoder = new LtDecoder(K, blockSize);
-    for (const seed of chosen) decoder.addFrame(seed, encodeBlock(blocks, seed, blockSize));
+    for (const seed of chosen)
+      decoder.addFrame(seed, encodeBlock(blocks, seed, blockSize));
     const out = decoder.decode();
     expect(out).not.toBeNull();
     expect(joinBlocks(out ?? [], payload.length)).toEqual(payload);

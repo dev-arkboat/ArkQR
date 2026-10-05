@@ -4,7 +4,12 @@
 
 import { describe, expect, it } from 'vitest';
 import jsQR from 'jsqr';
-import { encodeToMatrix, bytesToLatin1, latin1ToBytes, matrixToPixels } from '../src/qr/matrix.js';
+import {
+  encodeToMatrix,
+  bytesToLatin1,
+  latin1ToBytes,
+  matrixToPixels,
+} from '../src/qr/matrix.js';
 import {
   decodeFrame,
   encodeDataFrame,

@@ -48,11 +48,11 @@ E:\ArkQR
 
 ### Chosen libraries (with reasons — also repeated in README)
 
-| Dependency | Reason |
-|---|---|
-| `qrcode-generator` (1.4.4) | QR **encoding**: zero-dependency, true byte-mode, auto version select, tiny, works in workers/Node. Alternatives (`qrcode`, `uqr`) are larger or lack stable byte-mode APIs. |
-| `jsqr` (1.4.0) | QR **decoding** fallback + integration tests: pure JS (no WASM), runs in Web Worker and Node, returns raw byte values for byte-mode symbols. Native `BarcodeDetector` is preferred at runtime when it can carry binary; jsQR guarantees correctness everywhere. |
-| `vite`, `typescript`, `vitest`, `eslint`, `prettier` (dev) | Build / strict type-check / unit tests / lint / format. No UI framework: vanilla TS keeps the bundle tiny, fully offline, and removes an entire class of supply-chain/CSP risk. No other runtime dependencies. |
+| Dependency                                                 | Reason                                                                                                                                                                                                                                                          |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `qrcode-generator` (1.4.4)                                 | QR **encoding**: zero-dependency, true byte-mode, auto version select, tiny, works in workers/Node. Alternatives (`qrcode`, `uqr`) are larger or lack stable byte-mode APIs.                                                                                    |
+| `jsqr` (1.4.0)                                             | QR **decoding** fallback + integration tests: pure JS (no WASM), runs in Web Worker and Node, returns raw byte values for byte-mode symbols. Native `BarcodeDetector` is preferred at runtime when it can carry binary; jsQR guarantees correctness everywhere. |
+| `vite`, `typescript`, `vitest`, `eslint`, `prettier` (dev) | Build / strict type-check / unit tests / lint / format. No UI framework: vanilla TS keeps the bundle tiny, fully offline, and removes an entire class of supply-chain/CSP risk. No other runtime dependencies.                                                  |
 
 ### Build order
 
@@ -111,25 +111,25 @@ mid-stream.
 
 Common header (8 bytes):
 
-| Offset | Size | Field |
-|---|---|---|
-| 0 | 2 | `magic = 0x4151` ("AQ") |
-| 2 | 1 | `version = 0x01` |
-| 3 | 1 | `frameType`: 0 = metadata, 1 = data |
-| 4 | 4 | `sessionId` (random per transfer) |
+| Offset | Size | Field                               |
+| ------ | ---- | ----------------------------------- |
+| 0      | 2    | `magic = 0x4151` ("AQ")             |
+| 2      | 1    | `version = 0x01`                    |
+| 3      | 1    | `frameType`: 0 = metadata, 1 = data |
+| 4      | 4    | `sessionId` (random per transfer)   |
 
 Metadata frame (`frameType = 0`), after the header:
 
-| Field | Encoding |
-|---|---|
-| file name | `u16` byte-length + UTF-8 bytes (≤ 255 bytes) |
-| MIME type | `u16` byte-length + UTF-8 bytes (≤ 128 bytes, may be empty) |
-| original size | `u32` |
-| compressed size | `u32` |
-| compression flag | `u8` (0 = none, 1 = gzip) |
-| block size | `u16` |
-| source block count `K` | `u32` |
-| SHA-256 (original file) | 32 bytes |
+| Field                   | Encoding                                                    |
+| ----------------------- | ----------------------------------------------------------- |
+| file name               | `u16` byte-length + UTF-8 bytes (≤ 255 bytes)               |
+| MIME type               | `u16` byte-length + UTF-8 bytes (≤ 128 bytes, may be empty) |
+| original size           | `u32`                                                       |
+| compressed size         | `u32`                                                       |
+| compression flag        | `u8` (0 = none, 1 = gzip)                                   |
+| block size              | `u16`                                                       |
+| source block count `K`  | `u32`                                                       |
+| SHA-256 (original file) | 32 bytes                                                    |
 
 Data frame (`frameType = 1`): `u32 seed` + `blockSize` payload bytes.
 
@@ -158,11 +158,11 @@ Receivers lock to the first `sessionId` seen and ignore others until reset.
 
 ## 6. Density presets
 
-| Preset | `blockSize` | Wire bytes/frame | Notes |
-|---|---|---|---|
-| Reliable | 256 | 272 | Smallest symbols, easiest to scan, slowest |
-| Balanced (default) | 512 | 528 | Good middle ground |
-| Fast | 800 | 816 | Largest symbols, needs a steady hand / short distance |
+| Preset             | `blockSize` | Wire bytes/frame | Notes                                                 |
+| ------------------ | ----------- | ---------------- | ----------------------------------------------------- |
+| Reliable           | 256         | 272              | Smallest symbols, easiest to scan, slowest            |
+| Balanced (default) | 512         | 528              | Good middle ground                                    |
+| Fast               | 800         | 816              | Largest symbols, needs a steady hand / short distance |
 
 ## 7. Completion
 

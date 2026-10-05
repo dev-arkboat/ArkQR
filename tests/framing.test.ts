@@ -49,7 +49,11 @@ describe('framing', () => {
   });
 
   it('catches corruption via CRC (bit flips)', () => {
-    const bytes = encodeDataFrame(new Uint8Array([1, 1, 1, 1]), 42, pseudoRandomBytes(256, 3));
+    const bytes = encodeDataFrame(
+      new Uint8Array([1, 1, 1, 1]),
+      42,
+      pseudoRandomBytes(256, 3),
+    );
     // Inside header-session/payload/CRC: structure stays valid, CRC must fail.
     for (const pos of [5, 20, bytes.length - 5, bytes.length - 1]) {
       const bad = bytes.slice();

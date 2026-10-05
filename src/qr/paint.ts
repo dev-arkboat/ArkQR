@@ -14,7 +14,11 @@ export interface PaintOptions {
 }
 
 /** Paint a precomputed matrix onto a canvas, sizing the canvas to fit. */
-export function paintMatrix(canvas: HTMLCanvasElement, matrix: QrMatrix, opts: PaintOptions = {}): void {
+export function paintMatrix(
+  canvas: HTMLCanvasElement,
+  matrix: QrMatrix,
+  opts: PaintOptions = {},
+): void {
   const targetSize = opts.targetSize ?? 640;
   const quiet = opts.quietModules ?? 4;
   const fg = opts.foreground ?? '#000000';
@@ -32,7 +36,8 @@ export function paintMatrix(canvas: HTMLCanvasElement, matrix: QrMatrix, opts: P
   ctx.fillStyle = fg;
   for (let r = 0; r < matrix.size; r++) {
     for (let c = 0; c < matrix.size; c++) {
-      if (matrix.dark(r, c)) ctx.fillRect((c + quiet) * scale, (r + quiet) * scale, scale, scale);
+      if (matrix.dark(r, c))
+        ctx.fillRect((c + quiet) * scale, (r + quiet) * scale, scale, scale);
     }
   }
 }

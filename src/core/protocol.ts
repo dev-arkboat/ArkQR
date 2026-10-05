@@ -42,7 +42,10 @@ export function splitBlocks(data: Uint8Array, blockSize: number): Uint8Array[] {
 }
 
 /** Join source blocks and trim zero padding to the true payload length. */
-export function joinBlocks(blocks: readonly Uint8Array[], payloadLength: number): Uint8Array {
+export function joinBlocks(
+  blocks: readonly Uint8Array[],
+  payloadLength: number,
+): Uint8Array {
   const out = new Uint8Array(payloadLength);
   let o = 0;
   for (const b of blocks) {
@@ -93,7 +96,11 @@ export async function prepareTransfer(
 }
 
 /** Rough wall-clock estimate: K source blocks * overhead, at fps. */
-export function estimateSeconds(blockCount: number, fps: number, overhead = 1.35): number {
+export function estimateSeconds(
+  blockCount: number,
+  fps: number,
+  overhead = 1.35,
+): number {
   if (fps <= 0) return Number.POSITIVE_INFINITY;
   return (blockCount * overhead) / fps;
 }

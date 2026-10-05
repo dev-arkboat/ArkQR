@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { gzipCompress, gzipDecompress, compressIfBeneficial } from '../src/core/compression.js';
+import {
+  gzipCompress,
+  gzipDecompress,
+  compressIfBeneficial,
+} from '../src/core/compression.js';
 import { compressibleBytes, pseudoRandomBytes } from './util.js';
 
 describe('compression', () => {

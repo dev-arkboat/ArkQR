@@ -7,7 +7,9 @@ describe('crc32', () => {
     expect(crc32(new Uint8Array(0))).toBe(0x00000000);
     expect(crc32(enc.encode('123456789'))).toBe(0xcbf43926);
     expect(crc32(enc.encode('hello'))).toBe(0x3610a686);
-    expect(crc32(enc.encode('The quick brown fox jumps over the lazy dog'))).toBe(0x414fa339);
+    expect(crc32(enc.encode('The quick brown fox jumps over the lazy dog'))).toBe(
+      0x414fa339,
+    );
   });
 
   it('detects single-bit flips', () => {

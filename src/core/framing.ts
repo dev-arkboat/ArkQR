@@ -50,13 +50,13 @@ export interface DataPayload {
 }
 
 export type DecodedFrame =
-  | { kind: 'metadata'; meta: MetadataPayload }
-  | { kind: 'data'; data: DataPayload };
+  { kind: 'metadata'; meta: MetadataPayload } | { kind: 'data'; data: DataPayload };
 
 /** CRC mismatch (silently dropped) vs structurally invalid (dropped + counted). */
 export type DecodeFailure = { kind: 'crc' } | { kind: 'invalid'; reason: string };
 
-export type DecodeResult = { ok: true; frame: DecodedFrame } | { ok: false; failure: DecodeFailure };
+export type DecodeResult =
+  { ok: true; frame: DecodedFrame } | { ok: false; failure: DecodeFailure };
 
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder('utf-8', { fatal: true });
@@ -107,7 +107,17 @@ export function encodeMetadataFrame(meta: MetadataPayload): Uint8Array {
   validateSizes(meta.originalSize, meta.compressedSize, meta.blockSize, meta.blockCount);
 
   const body = new Uint8Array(
-    HEADER_BYTES + 2 + nameBytes.length + 2 + mimeBytes.length + 4 + 4 + 1 + 2 + 4 + SHA256_BYTES,
+    HEADER_BYTES +
+      2 +
+      nameBytes.length +
+      2 +
+      mimeBytes.length +
+      4 +
+      4 +
+      1 +
+      2 +
+      4 +
+      SHA256_BYTES,
   );
   const view = new DataView(body.buffer, body.byteOffset, body.length);
   writeHeader(view, FRAME_TYPE_METADATA, meta.sessionId);
@@ -163,11 +173,14 @@ function validateSizes(
       throw new Error(`invalid ${label} ${v}`);
     }
   }
-  if (!Number.isInteger(blockSize) || blockSize < MIN_BLOCK_SIZE || blockSize > MAX_BLOCK_SIZE) {
+  if (
+    !Number.isInteger(blockSize) ||
+    blockSize < MIN_BLOCK_SIZE ||
+    blockSize > MAX_BLOCK_SIZE
+  ) {
     throw new Error(`invalid blockSize ${blockSize}`);
   }
-  const expected =
-    compressedSize === 0 ? 0 : Math.ceil(compressedSize / blockSize);
+  const expected = compressedSize === 0 ? 0 : Math.ceil(compressedSize / blockSize);
   if (!Number.isInteger(blockCount) || blockCount < 0 || blockCount > MAX_BLOCKS) {
     throw new Error(`invalid blockCount ${blockCount}`);
   }
@@ -199,7 +212,10 @@ export function decodeFrame(bytes: Uint8Array): DecodeResult {
   const sessionId = bytes.slice(4, 8);
   try {
     if (frameType === FRAME_TYPE_METADATA) {
-      return { ok: true, frame: { kind: 'metadata', meta: parseMetadata(view, bytes, sessionId) } };
+      return {
+        ok: true,
+        frame: { kind: 'metadata', meta: parseMetadata(view, bytes, sessionId) },
+      };
     }
     return { ok: true, frame: { kind: 'data', data: parseData(bytes, sessionId) } };
   } catch (err) {
@@ -208,7 +224,11 @@ export function decodeFrame(bytes: Uint8Array): DecodeResult {
   }
 }
 
-function parseMetadata(view: DataView, bytes: Uint8Array, sessionId: Uint8Array): MetadataPayload {
+function parseMetadata(
+  view: DataView,
+  bytes: Uint8Array,
+  sessionId: Uint8Array,
+): MetadataPayload {
   let o = HEADER_BYTES;
   const need = (n: number): void => {
     if (o + n > bytes.length - CRC_BYTES) throw new Error('truncated metadata');

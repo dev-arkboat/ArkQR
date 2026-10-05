@@ -2,8 +2,14 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="description" content="ArkQR: send files between devices with animated QR codes. No network, no uploads, fully offline." />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <meta
+      name="description"
+      content="ArkQR: send files between devices with animated QR codes. No network, no uploads, fully offline."
+    />
     <meta name="theme-color" content="#0b1020" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="icon" type="image/svg+xml" href="./icon.svg" />
@@ -26,10 +32,23 @@
     </header>
 
     <nav class="tabs" role="tablist" aria-label="Mode">
-      <button id="tab-send" role="tab" aria-selected="true" aria-controls="panel-send" type="button">
+      <button
+        id="tab-send"
+        role="tab"
+        aria-selected="true"
+        aria-controls="panel-send"
+        type="button"
+      >
         Send
       </button>
-      <button id="tab-receive" role="tab" aria-selected="false" aria-controls="panel-receive" type="button" tabindex="-1">
+      <button
+        id="tab-receive"
+        role="tab"
+        aria-selected="false"
+        aria-controls="panel-receive"
+        type="button"
+        tabindex="-1"
+      >
         Receive
       </button>
     </nav>
@@ -48,14 +67,31 @@
           <p>Drop a file here or <span class="linklike">choose one</span></p>
           <p class="hint">Stays on this device. Nothing is uploaded.</p>
         </div>
-        <input id="file-input" type="file" class="visually-hidden" aria-label="Choose a file to send" />
+        <input
+          id="file-input"
+          type="file"
+          class="visually-hidden"
+          aria-label="Choose a file to send"
+        />
 
         <div id="file-info" class="card" hidden>
           <dl>
-            <div><dt>Name</dt><dd id="send-filename">—</dd></div>
-            <div><dt>Size</dt><dd id="send-filesize">—</dd></div>
-            <div><dt>Estimated time</dt><dd id="send-eta">—</dd></div>
-            <div><dt>Frames sent</dt><dd id="frames-sent">0</dd></div>
+            <div>
+              <dt>Name</dt>
+              <dd id="send-filename">—</dd>
+            </div>
+            <div>
+              <dt>Size</dt>
+              <dd id="send-filesize">—</dd>
+            </div>
+            <div>
+              <dt>Estimated time</dt>
+              <dd id="send-eta">—</dd>
+            </div>
+            <div>
+              <dt>Frames sent</dt>
+              <dd id="frames-sent">0</dd>
+            </div>
           </dl>
           <p id="send-warn" class="warn" hidden></p>
         </div>
@@ -63,14 +99,39 @@
         <form id="send-settings" class="card" aria-label="Send settings">
           <fieldset>
             <legend>QR density</legend>
-            <label><input type="radio" name="density" id="preset-reliable" value="reliable" /> Reliable <span class="hint">256 B — easiest to scan</span></label>
-            <label><input type="radio" name="density" id="preset-balanced" value="balanced" checked /> Balanced <span class="hint">512 B — default</span></label>
-            <label><input type="radio" name="density" id="preset-fast" value="fast" /> Fast <span class="hint">800 B — needs steady hands</span></label>
+            <label
+              ><input type="radio" name="density" id="preset-reliable" value="reliable" />
+              Reliable <span class="hint">256 B — easiest to scan</span></label
+            >
+            <label
+              ><input
+                type="radio"
+                name="density"
+                id="preset-balanced"
+                value="balanced"
+                checked
+              />
+              Balanced <span class="hint">512 B — default</span></label
+            >
+            <label
+              ><input type="radio" name="density" id="preset-fast" value="fast" /> Fast
+              <span class="hint">800 B — needs steady hands</span></label
+            >
           </fieldset>
-          <label for="fps-slider">Speed: <output id="fps-value" for="fps-slider">8 fps</output></label>
+          <label for="fps-slider"
+            >Speed: <output id="fps-value" for="fps-slider">8 fps</output></label
+          >
           <input id="fps-slider" type="range" min="1" max="30" step="1" value="8" />
           <label for="cap-input">Size cap (MB, max 32)</label>
-          <input id="cap-input" type="number" min="1" max="32" step="1" value="5" inputmode="numeric" />
+          <input
+            id="cap-input"
+            type="number"
+            min="1"
+            max="32"
+            step="1"
+            value="5"
+            inputmode="numeric"
+          />
         </form>
 
         <div class="button-row">
@@ -80,7 +141,13 @@
         </div>
 
         <div id="qr-wrap" class="qr-wrap">
-          <canvas id="qr-canvas" width="640" height="640" aria-label="Animated QR code stream" role="img"></canvas>
+          <canvas
+            id="qr-canvas"
+            width="640"
+            height="640"
+            aria-label="Animated QR code stream"
+            role="img"
+          ></canvas>
         </div>
         <p id="send-status" class="status" role="status">Choose a file to begin.</p>
 
@@ -103,9 +170,16 @@
 
       <section id="panel-receive" role="tabpanel" aria-labelledby="tab-receive" hidden>
         <h2>Receive a file</h2>
-        <p class="hint">Point your camera at the sender's screen. Needs HTTPS or localhost for camera access.</p>
+        <p class="hint">
+          Point your camera at the sender's screen. Needs HTTPS or localhost for camera
+          access.
+        </p>
 
-        <ul id="rx-support" class="support-list" aria-label="Browser capability check"></ul>
+        <ul
+          id="rx-support"
+          class="support-list"
+          aria-label="Browser capability check"
+        ></ul>
 
         <form class="card" aria-label="Receive settings">
           <label for="decoder-mode">Decoder</label>
@@ -114,7 +188,10 @@
             <option value="native">Native BarcodeDetector only</option>
             <option value="jsqr">jsQR only</option>
           </select>
-          <label class="inline"><input id="rx-beep" type="checkbox" checked /> Sound + vibration on events</label>
+          <label class="inline"
+            ><input id="rx-beep" type="checkbox" checked /> Sound + vibration on
+            events</label
+          >
         </form>
 
         <div class="button-row">
@@ -122,6 +199,7 @@
           <button id="cam-stop" type="button" disabled>Stop</button>
           <button id="rx-reset" type="button">Reset</button>
         </div>
+        <p id="rx-strategy" class="hint" role="status"></p>
 
         <div class="video-wrap">
           <video id="rx-video" playsinline muted aria-label="Camera preview"></video>
@@ -130,15 +208,47 @@
 
         <div class="card" aria-live="polite">
           <dl>
-            <div><dt>File</dt><dd id="rx-filename">—</dd></div>
-            <div><dt>Progress</dt><dd><span id="rx-percent">0%</span> <span id="rx-blocks">(0/— blocks)</span></dd></div>
-            <div><dt>Accepted</dt><dd id="rx-accepted">0</dd></div>
-            <div><dt>Rejected (CRC)</dt><dd id="rx-rejected">0</dd></div>
-            <div><dt>Duplicates</dt><dd id="rx-duplicates">0</dd></div>
-            <div><dt>Remaining (est.)</dt><dd id="rx-eta">—</dd></div>
-            <div><dt>Session</dt><dd id="rx-session">—</dd></div>
+            <div>
+              <dt>File</dt>
+              <dd id="rx-filename">—</dd>
+            </div>
+            <div>
+              <dt>Progress</dt>
+              <dd>
+                <span id="rx-percent">0%</span> <span id="rx-blocks">(0/— blocks)</span>
+              </dd>
+            </div>
+            <div>
+              <dt>Accepted</dt>
+              <dd id="rx-accepted">0</dd>
+            </div>
+            <div>
+              <dt>Rejected (CRC)</dt>
+              <dd id="rx-rejected">0</dd>
+            </div>
+            <div>
+              <dt>Duplicates</dt>
+              <dd id="rx-duplicates">0</dd>
+            </div>
+            <div>
+              <dt>Remaining (est.)</dt>
+              <dd id="rx-eta">—</dd>
+            </div>
+            <div>
+              <dt>Session</dt>
+              <dd id="rx-session">—</dd>
+            </div>
           </dl>
-          <div class="progress"><div id="rx-progress-bar" class="progress-bar" style="width: 0%"></div></div>
+          <div
+            class="progress"
+            role="progressbar"
+            aria-label="Decoding progress"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="0"
+          >
+            <div id="rx-progress-bar" class="progress-bar" style="width: 0%"></div>
+          </div>
           <p id="rx-warning" class="warn" hidden></p>
           <p id="rx-error" class="error" role="alert" hidden></p>
         </div>
@@ -153,8 +263,8 @@
 
     <footer>
       <p>
-        ArkQR works fully offline after first load. Files never leave your devices.
-        See <span class="mono">PROTOCOL.md</span> for the transfer spec.
+        ArkQR works fully offline after first load. Files never leave your devices. See
+        <span class="mono">PROTOCOL.md</span> for the transfer spec.
       </p>
     </footer>
 

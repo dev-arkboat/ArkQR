@@ -36,18 +36,18 @@ async function streamToBytes(stream: ReadableStream<Uint8Array>): Promise<Uint8A
 /** gzip-compress; throws if the CompressionStream API is unavailable. */
 export async function gzipCompress(data: Uint8Array): Promise<Uint8Array> {
   if (!compressionSupported()) throw new Error('CompressionStream unavailable');
-  const stream = new Blob([data as BlobPart]).stream().pipeThrough(
-    new CompressionStream('gzip'),
-  );
+  const stream = new Blob([data as BlobPart])
+    .stream()
+    .pipeThrough(new CompressionStream('gzip'));
   return streamToBytes(stream);
 }
 
 /** gzip-decompress; throws if the API is unavailable or data is corrupt. */
 export async function gzipDecompress(data: Uint8Array): Promise<Uint8Array> {
   if (!compressionSupported()) throw new Error('DecompressionStream unavailable');
-  const stream = new Blob([data as BlobPart]).stream().pipeThrough(
-    new DecompressionStream('gzip'),
-  );
+  const stream = new Blob([data as BlobPart])
+    .stream()
+    .pipeThrough(new DecompressionStream('gzip'));
   return streamToBytes(stream);
 }
 
