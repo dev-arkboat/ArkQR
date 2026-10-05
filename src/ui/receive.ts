@@ -3,7 +3,9 @@
 // Receivers lock to the first session id and ignore foreign sessions.
 
 import { MAX_FILE_BYTES } from '../core/constants.js';
-import { decodeFrame, type MetadataPayload } from '../core/framing.js';
+import { decodeFrame, type DecodedFrame, type MetadataPayload } from '../core/framing.js';
+import { dotDecodeGrid } from '../dot/codec.js';
+import { advise } from '../advisor/advise.js';
 import { gzipDecompress } from '../core/compression.js';
 import { bytesToHex, sha256Bytes } from '../core/hash.js';
 import { LtDecoder } from '../core/lt.js';
@@ -30,11 +32,6 @@ const PENDING_CAP = 4096;
 const DECODE_EVERY_MS = 400;
 const DECODE_EVERY_FRAMES = 32;
 
-interface PendingFrame {
-  seed: number;
-  payload: Uint8Array;
-}
-
 function sessionHex(id: Uint8Array): string {
   return [...id].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
@@ -50,7 +47,8 @@ export class ReceiveController {
   private meta: MetadataPayload | null = null;
   private decoder: LtDecoder | null = null;
   private lockedSession: Uint8Array | null = null;
-  private pending: PendingFrame[] = [];
+  /** Raw frames seen before metadata arrived (replayed once it does). */
+  private pendingRaw: Uint8Array[] = [];
   private accepted = 0;
   private rejected = 0;
   private duplicates = 0;
@@ -226,7 +224,7 @@ export class ReceiveController {
     this.meta = null;
     this.decoder = null;
     this.lockedSession = null;
-    this.pending = [];
+    this.pendingRaw = [];
     this.accepted = 0;
     this.rejected = 0;
     this.duplicates = 0;
@@ -251,24 +249,37 @@ export class ReceiveController {
     this.ui.session.textContent = '—';
   }
 
-  /** Returns true when the scanned QR validated (drives native->jsQR fallback). */
+  /** Returns true when the scanned payload validated (drives native->jsQR fallback). */
   private handleBytes(bytes: Uint8Array, _source: DecoderSource): boolean {
     if (this.done) return true;
-    const res = decodeFrame(bytes);
-    if (!res.ok) {
+    const direct = decodeFrame(bytes);
+    if (direct.ok) {
+      if (direct.frame.kind === 'data' && !this.meta) {
+        if (this.pendingRaw.length < PENDING_CAP) this.pendingRaw.push(bytes.slice());
+        return true;
+      }
+      return this.dispatch(direct.frame);
+    }
+    if (this.meta) {
+      // Dot-grid payloads are RS-protected and grid-padded: recover the
+      // frame bytes, then validate exactly like a QR frame.
+      const gridBytes = dotDecodeGrid(bytes, 16 + this.meta.blockSize);
+      if (gridBytes) {
+        const retry = decodeFrame(gridBytes);
+        if (retry.ok) return this.dispatch(retry.frame);
+      }
       this.rejected++;
       this.renderProgress();
       return false;
     }
+    if (this.pendingRaw.length < PENDING_CAP) this.pendingRaw.push(bytes.slice());
+    return true;
+  }
+
+  private dispatch(frame: DecodedFrame): boolean {
     if (this.firstFrameAt === 0) this.firstFrameAt = performance.now();
-    if (res.frame.kind === 'metadata') {
-      return this.handleMetadata(res.frame.meta);
-    }
-    return this.handleData(
-      res.frame.data.sessionId,
-      res.frame.data.seed,
-      res.frame.data.payload,
-    );
+    if (frame.kind === 'metadata') return this.handleMetadata(frame.meta);
+    return this.handleData(frame.data.sessionId, frame.data.seed, frame.data.payload);
   }
 
   private checkSession(sessionId: Uint8Array): boolean {
@@ -308,9 +319,9 @@ export class ReceiveController {
       return true;
     }
     this.decoder = new LtDecoder(meta.blockCount, meta.blockSize);
-    // Replay data frames that arrived before the metadata (late join order).
-    for (const p of this.pending) this.addPayload(p.seed, p.payload);
-    this.pending = [];
+    // Replay raw frames that arrived before the metadata (late join order).
+    for (const raw of this.pendingRaw) this.handleBytes(raw, 'jsqr');
+    this.pendingRaw = [];
     this.renderProgress();
     void this.maybeDecode(true);
     return true;
@@ -318,11 +329,7 @@ export class ReceiveController {
 
   private handleData(sessionId: Uint8Array, seed: number, payload: Uint8Array): boolean {
     if (!this.checkSession(sessionId)) return true;
-    if (!this.meta || !this.decoder) {
-      if (this.pending.length < PENDING_CAP)
-        this.pending.push({ seed, payload: payload.slice() });
-      return true;
-    }
+    if (!this.meta || !this.decoder) return true; // unreachable: buffered raw above
     if (payload.length !== this.meta.blockSize) {
       this.rejected++;
       this.renderProgress();
@@ -428,7 +435,7 @@ export class ReceiveController {
     this.renderRateAndTip();
   }
 
-  /** Live intake rate plus one actionable tip when the transfer is slow. */
+  /** Live intake rate plus the advisor's headline + recommended actions. */
   private renderRateAndTip(): void {
     if (this.firstFrameAt === 0) {
       this.ui.rate.textContent = '—';
@@ -443,18 +450,19 @@ export class ReceiveController {
         ? `${fps.toFixed(1)} f/s · ${((fps * blockSize) / 1024).toFixed(1)} KB/s`
         : `${fps.toFixed(1)} f/s`;
 
-    const total = this.accepted + this.rejected + this.duplicates;
-    let tip = '';
-    if (elapsed > 5 && total > 10 && this.rejected / total > 0.2) {
-      tip =
-        'Many frames are failing checks — move closer, raise sender brightness, and hold both devices steady.';
-    } else if (elapsed > 10 && this.accepted > 0 && fps < 2) {
-      tip =
-        'Slow intake — raise the sender Speed slider, switch to a denser preset, or move closer so the QR fills the frame.';
-    } else if (elapsed > 10 && this.accepted === 0) {
-      tip =
-        'No usable frames yet — is the sender screen showing the animated QR? Try “Scan from photo” with a screenshot to test the pipeline.';
-    }
+    const advice = advise({
+      elapsedSec: elapsed,
+      totalScans: this.accepted + this.rejected + this.duplicates,
+      accepted: this.accepted,
+      rejected: this.rejected,
+      duplicates: this.duplicates,
+      hasMetadata: this.meta !== null,
+      done: this.done,
+    });
+    const tip =
+      advice.actions.length > 0
+        ? `${advice.headline} ${advice.actions.join(' · ')}`
+        : advice.headline;
     if (tip !== this.lastTip) {
       this.lastTip = tip;
       this.ui.tip.textContent = tip;

@@ -50,6 +50,11 @@ your hands are. Examples at the 12 fps default: Reliable (256 B) ≈ 2.6 KB/s
 rate — below ~2 frames/s, raise sender Speed, switch to Fast or Max density, or
 move closer. This is a sneakernet for keys, documents and photos — not movies.
 
+Alternative pixel layers: SEND offers a **Dots** experimental mode (anchored
+dot grids with Reed-Solomon protection instead of QR symbols — same frames,
+same fountain code; close range, centered captures). The RECEIVE advisor
+watches intake live and tells you what to change on the sender.
+
 ## Tips for reliable scanning
 
 - Max brightness on the sender; dark room beats backlight.
@@ -140,3 +145,12 @@ can use their cameras. No camera at all? RECEIVE offers “Scan from photo”.
 Reserved for protocol v2: derive a key (PBKDF2/Argon2) from a passphrase,
 AES-GCM the payload before chunking, add salt + nonce to the metadata
 frame, and prompt for the passphrase on RECEIVE. No v1 wire change needed.
+
+## Related work
+
+- [cimbar](https://github.com/sz3/cimbar) — the state of the art in
+  high-density color barcode transfer (~100 KB/s in tuned native code).
+  Its decoder is C++/OpenCV with no browser build, so it can't back a
+  browser-only app — but it is the reference if you outgrow this one.
+- Compression stays gzip-if-smaller: a zstd WASM module would add a heavy
+  dependency for near-zero gain at these file sizes.

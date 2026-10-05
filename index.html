@@ -167,6 +167,24 @@
         </div>
 
         <form id="send-settings" class="card" aria-label="Send settings">
+          <p class="card-label">Code</p>
+          <div class="segment segment-auto" role="group" aria-label="Code family">
+            <label class="seg-option"
+              ><input type="radio" name="code" id="code-qr" value="qr" checked />
+              <span class="seg-name">QR</span>
+              <span class="seg-sub">universal</span></label
+            >
+            <label class="seg-option"
+              ><input type="radio" name="code" id="code-dots" value="dots" />
+              <span class="seg-name">Dots</span>
+              <span class="seg-sub">experimental</span></label
+            >
+          </div>
+          <p class="hint">
+            Dots carry identical frames as anchored dot grids — no per-symbol error
+            correction, so the fountain code absorbs every drop. Close range, centered
+            captures only.
+          </p>
           <p class="card-label">QR density</p>
           <div class="segment segment-auto" role="group" aria-label="QR density">
             <label class="seg-option"
@@ -201,54 +219,56 @@
               <span class="seg-sub">2000 B · closest</span></label
             >
           </div>
-          <p class="card-label">QR ink</p>
-          <div class="segment segment-auto" role="group" aria-label="QR ink color">
-            <label class="seg-option"
-              ><input type="radio" name="ink" id="ink-black" value="black" checked />
-              <span class="seg-name">Black</span>
-              <span class="seg-sub">default</span></label
+          <div id="qr-only">
+            <p class="card-label">QR ink</p>
+            <div class="segment segment-auto" role="group" aria-label="QR ink color">
+              <label class="seg-option"
+                ><input type="radio" name="ink" id="ink-black" value="black" checked />
+                <span class="seg-name">Black</span>
+                <span class="seg-sub">default</span></label
+              >
+              <label class="seg-option"
+                ><input type="radio" name="ink" id="ink-red" value="red" />
+                <span class="seg-name">Red</span>
+                <span class="seg-sub">pure #F00</span></label
+              >
+              <label class="seg-option"
+                ><input type="radio" name="ink" id="ink-green" value="green" />
+                <span class="seg-name">Green</span>
+                <span class="seg-sub">may scan worse</span></label
+              >
+              <label class="seg-option"
+                ><input type="radio" name="ink" id="ink-blue" value="blue" />
+                <span class="seg-name">Blue</span>
+                <span class="seg-sub">pure #00F</span></label
+              >
+            </div>
+            <p class="hint">
+              Ink is appearance only — same data, decoded by brightness. Green is
+              lightest; test it with your phones before relying on it.
+            </p>
+            <p class="card-label">Error correction</p>
+            <div
+              class="segment segment-auto"
+              role="group"
+              aria-label="Error correction level"
             >
-            <label class="seg-option"
-              ><input type="radio" name="ink" id="ink-red" value="red" />
-              <span class="seg-name">Red</span>
-              <span class="seg-sub">pure #F00</span></label
-            >
-            <label class="seg-option"
-              ><input type="radio" name="ink" id="ink-green" value="green" />
-              <span class="seg-name">Green</span>
-              <span class="seg-sub">may scan worse</span></label
-            >
-            <label class="seg-option"
-              ><input type="radio" name="ink" id="ink-blue" value="blue" />
-              <span class="seg-name">Blue</span>
-              <span class="seg-sub">pure #00F</span></label
-            >
+              <label class="seg-option"
+                ><input type="radio" name="ec" id="ec-m" value="m" checked />
+                <span class="seg-name">Sturdy</span>
+                <span class="seg-sub">level M · default</span></label
+              >
+              <label class="seg-option"
+                ><input type="radio" name="ec" id="ec-l" value="l" />
+                <span class="seg-name">Compact</span>
+                <span class="seg-sub">level L · smaller symbols</span></label
+              >
+            </div>
+            <p class="hint">
+              Same bytes, smaller QR — easier to scan at distance. Lost frames are
+              absorbed by the fountain code, so lower correction stays safe.
+            </p>
           </div>
-          <p class="hint">
-            Ink is appearance only — same data, decoded by brightness. Green is lightest;
-            test it with your phones before relying on it.
-          </p>
-          <p class="card-label">Error correction</p>
-          <div
-            class="segment segment-auto"
-            role="group"
-            aria-label="Error correction level"
-          >
-            <label class="seg-option"
-              ><input type="radio" name="ec" id="ec-m" value="m" checked />
-              <span class="seg-name">Sturdy</span>
-              <span class="seg-sub">level M · default</span></label
-            >
-            <label class="seg-option"
-              ><input type="radio" name="ec" id="ec-l" value="l" />
-              <span class="seg-name">Compact</span>
-              <span class="seg-sub">level L · smaller symbols</span></label
-            >
-          </div>
-          <p class="hint">
-            Same bytes, smaller QR — easier to scan at distance. Lost frames are absorbed
-            by the fountain code, so lower correction stays safe.
-          </p>
           <div class="field-row">
             <div class="field">
               <label for="fps-slider"
