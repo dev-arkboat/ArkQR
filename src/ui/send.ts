@@ -84,6 +84,8 @@ export class SendController {
     reset: el<HTMLButtonElement>('send-reset-btn'),
     canvas: el<HTMLCanvasElement>('qr-canvas'),
     qrWrap: el<HTMLDivElement>('qr-wrap'),
+    live: el<HTMLElement>('send-live'),
+    stageFps: el<HTMLElement>('stage-fps'),
     status: el<HTMLParagraphElement>('send-status'),
     exportBtn: el<HTMLButtonElement>('export-btn'),
     exportStop: el<HTMLButtonElement>('export-stop-btn'),
@@ -127,6 +129,7 @@ export class SendController {
     this.ui.fpsSlider.addEventListener('input', () => {
       this.fps = Number(this.ui.fpsSlider.value);
       this.ui.fpsValue.textContent = `${this.fps} fps`;
+      this.ui.stageFps.textContent = `${this.fps} fps`;
       this.refreshEta();
     });
     for (const preset of Object.keys(DENSITY_PRESETS) as DensityPreset[]) {
@@ -198,6 +201,7 @@ export class SendController {
       this.ui.exportBtn.disabled = false;
       this.playing = true;
       this.ui.play.textContent = 'Pause';
+      this.ui.live.hidden = false;
       this.lastTick = performance.now();
       this.setStatus(
         note ?? `Streaming “${info.fileName}”. Point the receiver camera at this screen.`,
@@ -277,6 +281,7 @@ export class SendController {
       );
       this.playing = false;
       this.ui.play.textContent = 'Play';
+      this.ui.live.hidden = true;
     } finally {
       this.showing = false;
     }
@@ -286,6 +291,7 @@ export class SendController {
     if (!this.stream) return;
     this.playing = !this.playing;
     this.ui.play.textContent = this.playing ? 'Pause' : 'Play';
+    this.ui.live.hidden = !this.playing;
     if (this.playing) {
       this.lastTick = performance.now();
       void this.wake.acquire();
@@ -320,6 +326,7 @@ export class SendController {
     this.ui.frames.textContent = '0';
     this.ui.eta.textContent = '—';
     this.ui.warn.hidden = true;
+    this.ui.live.hidden = true;
     const ctx = this.ui.canvas.getContext('2d');
     if (ctx) {
       ctx.fillStyle = '#ffffff';

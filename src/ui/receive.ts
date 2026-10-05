@@ -68,6 +68,8 @@ export class ReceiveController {
     reset: el<HTMLButtonElement>('rx-reset'),
     video: el<HTMLVideoElement>('rx-video'),
     canvas: el<HTMLCanvasElement>('rx-canvas'),
+    standby: el<HTMLDivElement>('rx-standby'),
+    corners: el<HTMLDivElement>('rx-corners'),
     strategy: el<HTMLParagraphElement>('rx-strategy'),
     fileName: el<HTMLElement>('rx-filename'),
     percent: el<HTMLElement>('rx-percent'),
@@ -160,6 +162,8 @@ export class ReceiveController {
       this.scanner = scanner;
       this.ui.camStart.disabled = true;
       this.ui.camStop.disabled = false;
+      this.ui.standby.hidden = true;
+      this.ui.corners.hidden = false;
     } catch (err) {
       this.showError(err instanceof Error ? err.message : 'Could not start the camera.');
     }
@@ -171,6 +175,8 @@ export class ReceiveController {
     this.ui.camStart.disabled = false;
     this.ui.camStop.disabled = true;
     this.ui.strategy.textContent = '';
+    this.ui.corners.hidden = true;
+    this.ui.standby.hidden = false;
   }
 
   reset(): void {
