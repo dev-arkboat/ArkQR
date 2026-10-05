@@ -450,7 +450,7 @@ export class ReceiveController {
         'Many frames are failing checks — move closer, raise sender brightness, and hold both devices steady.';
     } else if (elapsed > 10 && this.accepted > 0 && fps < 2) {
       tip =
-        'Slow intake — raise the sender Speed slider, switch density to Fast, or move closer so the QR fills the frame.';
+        'Slow intake — raise the sender Speed slider, switch density to Fast or Max, or move closer so the QR fills the frame.';
     } else if (elapsed > 10 && this.accepted === 0) {
       tip =
         'No usable frames yet — is the sender screen showing the animated QR? Try “Scan from photo” with a screenshot to test the pipeline.';

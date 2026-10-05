@@ -151,34 +151,24 @@ Receivers lock to the first `sessionId` seen and ignore others until reset.
 - Each frame is encoded as **one binary (byte-mode) QR symbol**, raw bytes, no
   base64.
 - Error correction level **M**, auto-selected version (0 = auto) fitting the
-  frame. Max data-frame on the wire is `800 + 16 = 816` bytes ≪ 2331-byte
+  frame. Max data-frame on the wire is `1400 + 16 = 1416` bytes ≪ 2331-byte
   version-40-M capacity.
 - Rendered large on `<canvas>`: white background, dark modules, quiet zone ≥ 4
   modules, integer pixel scaling, `image-rendering: pixelated`.
-
-### Presentation layouts (no wire change)
-
-- **Single (1×1, default):** one frame per screen refresh. Easiest to scan at
-  any distance.
-- **Quad (2×2):** four distinct frames per refresh, each tile an ordinary
-  frame with its own seed. Roughly 4× the data rate at close range; tiles are
-  smaller, so the devices must be held close.
-- Receivers auto-detect both: decode the full capture first (single hits
-  here, one pass, full speed); only on a miss, decode the four exact halves.
-  Halves are exact — never overlapping — because the jsQR decoder locks onto
-  one code per image and fails outright when two codes share a frame
-  (verified in `tests/quad.test.ts`; it tolerates only small slivers, which
-  is what slight misalignment produces). Partially visible grids simply yield
-  fewer frames per capture; fountain coding absorbs the difference.
-  Switching layouts never changes the session id and needs no receiver reset.
+- One frame per screen refresh. Multi-code tiled screens were prototyped and
+  rejected: handheld tilt/keystone misaligns tiles, and the jsQR decoder
+  handles exactly one code per image, so tiles fail in real hands. Density
+  (larger blocks + higher fps on the proven single-code pipeline) is the
+  speed lever, not tiling.
 
 ## 6. Density presets
 
-| Preset             | `blockSize` | Wire bytes/frame | Notes                                                 |
-| ------------------ | ----------- | ---------------- | ----------------------------------------------------- |
-| Reliable           | 256         | 272              | Smallest symbols, easiest to scan, slowest            |
-| Balanced (default) | 512         | 528              | Good middle ground                                    |
-| Fast               | 800         | 816              | Largest symbols, needs a steady hand / short distance |
+| Preset             | `blockSize` | Wire bytes/frame | Notes                                         |
+| ------------------ | ----------- | ---------------- | --------------------------------------------- |
+| Reliable           | 256         | 272              | Smallest symbols, easiest to scan, slowest    |
+| Balanced (default) | 512         | 528              | Good middle ground                            |
+| Fast               | 800         | 816              | Larger symbols, needs a steady hand           |
+| Max                | 1400        | 1416             | Version-33 symbols, close range only, fastest |
 
 ## 7. Completion
 
@@ -189,8 +179,9 @@ error, keep collecting (more frames cannot fix a hash mismatch of an already
 
 ## 8. Throughput model
 
-Goodput ≈ `blockSize × fps / (1 + overhead)`. At the 10 fps default on Balanced:
-`512 × 10 / 1.2 ≈ 4.3 KB/s` → 1 MiB ≈ 4 min. Honest real-world range is
+Goodput ≈ `blockSize × fps / (1 + overhead)`. At the 12 fps default on Balanced:
+`512 × 12 / 1.2 ≈ 5.1 KB/s` → 1 MiB ≈ 3.5 min; Max at 12 fps ≈ 14 KB/s.
+Honest real-world range is
 **5–30 KB/s** depending on preset, fps, device focus speed and steadiness.
 The sender shows an estimated time from `K × 1.35 / fps`.
 

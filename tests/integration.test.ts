@@ -16,7 +16,7 @@ import {
   encodeMetadataFrame,
   type MetadataPayload,
 } from '../src/core/framing.js';
-import { joinBlocks, prepareTransfer } from '../src/core/protocol.js';
+import { DENSITY_PRESETS, joinBlocks, prepareTransfer } from '../src/core/protocol.js';
 import { LtDecoder, encodeBlock } from '../src/core/lt.js';
 import { gzipDecompress } from '../src/core/compression.js';
 import { bytesToHex, sha256Bytes } from '../src/core/hash.js';
@@ -45,6 +45,19 @@ describe('QR byte fidelity', () => {
     // decoding), which is exactly why ArkQR uses `binaryData` + CRC framing.
     // The latin-1 helpers themselves are lossless:
     expect(latin1ToBytes(bytesToLatin1(frame))).toEqual(frame);
+  });
+
+  it('carries a Max-density (1400 B) frame through QR', () => {
+    const payload = pseudoRandomBytes(DENSITY_PRESETS.max.blockSize, 55);
+    const frame = encodeDataFrame(new Uint8Array([1, 2, 3, 4]), 77, payload);
+    const matrix = encodeToMatrix(frame);
+    // Must fit well inside QR limits (version 40 = 177 modules).
+    expect(matrix.size).toBeLessThanOrEqual(177);
+    console.info(
+      `Max frame: ${frame.length} bytes -> ${matrix.size}x${matrix.size} modules`,
+    );
+    const back = qrRoundTrip(frame);
+    expect(back).toEqual(frame);
   });
 
   it('metadata frame survives QR round-trip', () => {

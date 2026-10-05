@@ -316,8 +316,8 @@ h3 {
   margin-bottom: 0.9rem;
 }
 
-.segment-2 {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.segment-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .seg-option {
@@ -818,6 +818,10 @@ footer {
 @media (max-width: 639px) {
   .field-row {
     grid-template-columns: 1fr;
+  }
+
+  .segment-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .steps li {

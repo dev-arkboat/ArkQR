@@ -158,7 +158,7 @@
 
         <form id="send-settings" class="card" aria-label="Send settings">
           <p class="card-label">QR density</p>
-          <div class="segment" role="group" aria-label="QR density">
+          <div class="segment segment-4" role="group" aria-label="QR density">
             <label class="seg-option"
               ><input type="radio" name="density" id="preset-reliable" value="reliable" />
               <span class="seg-name">Reliable</span>
@@ -178,38 +178,20 @@
             <label class="seg-option"
               ><input type="radio" name="density" id="preset-fast" value="fast" />
               <span class="seg-name">Fast</span>
-              <span class="seg-sub">800 B · steady hands</span></label
-            >
-          </div>
-          <p class="card-label">Screen layout</p>
-          <div class="segment segment-2" role="group" aria-label="Screen layout">
-            <label class="seg-option"
-              ><input
-                type="radio"
-                name="layout"
-                id="layout-single"
-                value="single"
-                checked
-              />
-              <span class="seg-name">Single</span>
-              <span class="seg-sub">1 QR · any distance</span></label
+              <span class="seg-sub">800 B · steady</span></label
             >
             <label class="seg-option"
-              ><input type="radio" name="layout" id="layout-quad" value="quad" />
-              <span class="seg-name">Quad</span>
-              <span class="seg-sub">4 QR · ~4× faster, close range</span></label
+              ><input type="radio" name="density" id="preset-max" value="max" />
+              <span class="seg-name">Max</span>
+              <span class="seg-sub">1400 B · close range</span></label
             >
           </div>
-          <p class="hint">
-            Quad shows four frames per refresh; receivers detect either layout
-            automatically. Quad tiles are smaller — hold the phones close.
-          </p>
           <div class="field-row">
             <div class="field">
               <label for="fps-slider"
-                >Speed <output id="fps-value" for="fps-slider">10 fps</output></label
+                >Speed <output id="fps-value" for="fps-slider">12 fps</output></label
               >
-              <input id="fps-slider" type="range" min="1" max="30" step="1" value="10" />
+              <input id="fps-slider" type="range" min="1" max="30" step="1" value="12" />
             </div>
             <div class="field field-narrow">
               <label for="cap-input">Size cap (MB)</label>
@@ -237,7 +219,7 @@
             <span id="send-live" class="live-badge" hidden
               ><span class="live-dot" aria-hidden="true"></span>LIVE</span
             >
-            <span id="stage-fps" class="hint mono">10 fps</span>
+            <span id="stage-fps" class="hint mono">12 fps</span>
           </div>
           <canvas
             id="qr-canvas"

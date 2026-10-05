@@ -12,6 +12,7 @@ export const DENSITY_PRESETS = {
   reliable: { blockSize: 256, label: 'Reliable' },
   balanced: { blockSize: 512, label: 'Balanced' },
   fast: { blockSize: 800, label: 'Fast' },
+  max: { blockSize: 1400, label: 'Max' },
 } as const;
 
 export type DensityPreset = keyof typeof DENSITY_PRESETS;
