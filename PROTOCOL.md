@@ -156,6 +156,22 @@ Receivers lock to the first `sessionId` seen and ignore others until reset.
 - Rendered large on `<canvas>`: white background, dark modules, quiet zone ≥ 4
   modules, integer pixel scaling, `image-rendering: pixelated`.
 
+### Presentation layouts (no wire change)
+
+- **Single (1×1, default):** one frame per screen refresh. Easiest to scan at
+  any distance.
+- **Quad (2×2):** four distinct frames per refresh, each tile an ordinary
+  frame with its own seed. Roughly 4× the data rate at close range; tiles are
+  smaller, so the devices must be held close.
+- Receivers auto-detect both: decode the full capture first (single hits
+  here, one pass, full speed); only on a miss, decode the four exact halves.
+  Halves are exact — never overlapping — because the jsQR decoder locks onto
+  one code per image and fails outright when two codes share a frame
+  (verified in `tests/quad.test.ts`; it tolerates only small slivers, which
+  is what slight misalignment produces). Partially visible grids simply yield
+  fewer frames per capture; fountain coding absorbs the difference.
+  Switching layouts never changes the session id and needs no receiver reset.
+
 ## 6. Density presets
 
 | Preset             | `blockSize` | Wire bytes/frame | Notes                                                 |

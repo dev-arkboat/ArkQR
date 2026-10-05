@@ -246,8 +246,8 @@ export class CameraScanner {
     this.worker.onmessage = (ev: MessageEvent<ResultMessage>) => {
       this.workerBusy = false;
       const msg = ev.data;
-      if (msg.found && msg.bytes) {
-        this.callbacks.onBytes(new Uint8Array(msg.bytes), 'jsqr');
+      for (const buf of msg.frames) {
+        this.callbacks.onBytes(new Uint8Array(buf), 'jsqr');
       }
     };
     this.worker.onerror = (): void => {
@@ -416,23 +416,22 @@ export async function decodeImageFiles(files: File[]): Promise<Uint8Array[]> {
   const worker = new Worker(new URL('../workers/decode.worker.ts', import.meta.url), {
     type: 'module',
   });
-  const pending = new Map<number, (bytes: Uint8Array | null) => void>();
+  const pending = new Map<number, (frames: Uint8Array[]) => void>();
   let scanId = 0;
   worker.onmessage = (ev: MessageEvent<ResultMessage>): void => {
     const msg = ev.data;
     const resolve = pending.get(msg.id);
     pending.delete(msg.id);
-    resolve?.(msg.found && msg.bytes ? new Uint8Array(msg.bytes) : null);
+    resolve?.(msg.frames.map((buf) => new Uint8Array(buf)));
   };
   worker.onerror = (): void => {
-    for (const resolve of pending.values()) resolve(null);
+    for (const resolve of pending.values()) resolve([]);
     pending.clear();
   };
   const found: Uint8Array[] = [];
   try {
     for (const file of files) {
-      const bytes = await decodeOneImage(worker, pending, file, () => ++scanId);
-      if (bytes) found.push(bytes);
+      found.push(...(await decodeOneImage(worker, pending, file, () => ++scanId)));
     }
   } finally {
     worker.terminate();
@@ -442,16 +441,16 @@ export async function decodeImageFiles(files: File[]): Promise<Uint8Array[]> {
 
 async function decodeOneImage(
   worker: Worker,
-  pending: Map<number, (bytes: Uint8Array | null) => void>,
+  pending: Map<number, (frames: Uint8Array[]) => void>,
   file: File,
   nextId: () => number,
-): Promise<Uint8Array | null> {
+): Promise<Uint8Array[]> {
   let drawable: Drawable | null = null;
   try {
     drawable = await loadDrawable(file);
     const pixels = rasterize(drawable);
     const id = nextId();
-    const result = new Promise<Uint8Array | null>((resolve) => {
+    const result = new Promise<Uint8Array[]>((resolve) => {
       pending.set(id, resolve);
       const msg: ScanMessage = {
         kind: 'scan',
@@ -464,15 +463,15 @@ async function decodeOneImage(
         worker.postMessage(msg, [pixels.data.buffer]);
       } catch {
         pending.delete(id);
-        resolve(null);
+        resolve([]);
       }
       setTimeout(() => {
-        if (pending.delete(id)) resolve(null);
+        if (pending.delete(id)) resolve([]);
       }, STILL_TIMEOUT_MS);
     });
     return await result;
   } catch {
-    return null;
+    return [];
   } finally {
     drawable?.dispose?.();
   }

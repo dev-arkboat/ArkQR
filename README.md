@@ -45,7 +45,9 @@ Goodput ≈ `blockSize × fps / overhead`. Realistic measured range is
 **~5–30 KB/s** depending on preset, fps, camera focus speed and how steady
 your hands are. Examples at the 10 fps default: Reliable (256 B) ≈ 2.1 KB/s
 → 1 MB ≈ 8 min; Balanced (512 B, default) ≈ 4.3 KB/s → 1 MB ≈ 4 min; Fast
-(800 B) ≈ 6.7 KB/s → 1 MB ≈ 2.5 min. The RECEIVE tab shows a live intake
+(800 B) ≈ 6.7 KB/s → 1 MB ≈ 2.5 min. Switch Screen layout to **Quad** for
+roughly 4× that (four frames per refresh at close range — e.g. Balanced Quad
+≈ 17 KB/s → 1 MB ≈ 1 min, 500 KB well under a minute). The RECEIVE tab shows a live intake
 rate — below ~2 frames/s, raise sender Speed, switch to Fast density, or move
 closer. This is a sneakernet for keys, documents and photos — not movies.
 

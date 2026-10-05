@@ -12,7 +12,7 @@ import {
   type DensityPreset,
   type PreparedTransfer,
 } from '../core/protocol.js';
-import { paintFrame } from '../qr/paint.js';
+import { paintFrame, paintQuad } from '../qr/paint.js';
 import { EncodeClient, FrameStream, type TransferInfo } from '../workers/encodeClient.js';
 import { WakeLock } from './wake.js';
 
@@ -51,6 +51,8 @@ export class SendController {
   private info: TransferInfo | null = null;
   private playing = false;
   private fps = 10;
+  /** Frames per screen refresh: 1 (single) or 4 (quad). Wire format unchanged. */
+  private tiles = 1;
   private rafId = 0;
   private lastTick = 0;
   private framesSent = 0;
@@ -134,11 +136,28 @@ export class SendController {
     });
     for (const preset of Object.keys(DENSITY_PRESETS) as DensityPreset[]) {
       el<HTMLInputElement>(`preset-${preset}`).addEventListener('change', () => {
-        if (this.file)
+        if (this.file) {
           void this.setFile(
             this.file,
             'Stream restarted with new density — receivers must press Reset.',
           );
+        }
+      });
+    }
+    for (const layout of ['single', 'quad'] as const) {
+      el<HTMLInputElement>(`layout-${layout}`).addEventListener('change', () => {
+        // Presentation only: same session, same wire format — receivers
+        // auto-detect both layouts, so no restart is needed.
+        this.tiles = this.selectedTiles();
+        this.refreshEta();
+        this.updateWarn();
+        if (this.info) {
+          this.setStatus(
+            this.tiles === 4
+              ? 'Quad layout: ~4× faster at close range. Receivers detect it automatically.'
+              : 'Single layout: easiest to scan at any distance.',
+          );
+        }
       });
     }
     this.ui.play.addEventListener('click', () => {
@@ -174,6 +193,7 @@ export class SendController {
     }
     this.teardownStream();
     this.file = file;
+    this.tiles = this.selectedTiles();
     this.setStatus('Preparing file (compressing, hashing, chunking)…');
     try {
       const bytes = new Uint8Array(await file.arrayBuffer());
@@ -224,12 +244,18 @@ export class SendController {
     return DENSITY_PRESETS.balanced.blockSize;
   }
 
+  private selectedTiles(): number {
+    return el<HTMLInputElement>('layout-quad').checked ? 4 : 1;
+  }
+
   private refreshEta(): void {
     if (!this.info) {
       this.ui.eta.textContent = '—';
       return;
     }
-    this.ui.eta.textContent = formatEta(estimateSeconds(this.info.blockCount, this.fps));
+    this.ui.eta.textContent = formatEta(
+      estimateSeconds(this.info.blockCount, this.fps * this.tiles),
+    );
   }
 
   private updateWarn(): void {
@@ -237,7 +263,7 @@ export class SendController {
       this.ui.warn.hidden = true;
       return;
     }
-    const secs = estimateSeconds(this.info.blockCount, this.fps);
+    const secs = estimateSeconds(this.info.blockCount, this.fps * this.tiles);
     if (secs > 300) {
       this.ui.warn.hidden = false;
       this.ui.warn.textContent = `Long transfer: estimated ${formatEta(secs)} at ${this.fps} fps. Try the Fast preset or a higher speed — scanning stays reliable only if the receiver keeps up.`;
@@ -264,16 +290,15 @@ export class SendController {
     if (this.showing || !stream) return;
     this.showing = true;
     try {
-      this.prefetch ??= stream.next();
-      const frame = await this.prefetch;
-      if (this.stream) {
-        this.prefetch = this.stream.next();
-        this.prefetch.catch(() => undefined);
+      const tiles = this.tiles;
+      const frames: Uint8Array[] = [];
+      for (let i = 0; i < tiles; i++) frames.push(await this.nextFrame(stream));
+      if (tiles === 1) {
+        paintFrame(this.ui.canvas, frames[0], { targetSize: 640 });
       } else {
-        this.prefetch = null;
+        paintQuad(this.ui.canvas, frames, { targetSize: 640 });
       }
-      paintFrame(this.ui.canvas, frame, { targetSize: 640 });
-      this.framesSent++;
+      this.framesSent += frames.length;
       this.ui.frames.textContent = String(this.framesSent);
     } catch (err) {
       this.setStatus(
@@ -285,6 +310,19 @@ export class SendController {
     } finally {
       this.showing = false;
     }
+  }
+
+  /** One stream frame, keeping a single prefetch in flight for smoothness. */
+  private async nextFrame(stream: FrameStream): Promise<Uint8Array> {
+    this.prefetch ??= stream.next();
+    const frame = await this.prefetch;
+    if (this.stream) {
+      this.prefetch = this.stream.next();
+      this.prefetch.catch(() => undefined);
+    } else {
+      this.prefetch = null;
+    }
+    return frame;
   }
 
   private togglePlay(): void {

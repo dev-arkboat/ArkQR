@@ -212,7 +212,7 @@ export class ReceiveController {
         );
         this.ui.photoStatus.textContent = '';
       } else {
-        this.ui.photoStatus.textContent = `Photo scan: ${frames.length}/${files.length} image(s) held a QR frame. Load more photos of later frames to continue.`;
+        this.ui.photoStatus.textContent = `Photo scan: ${frames.length} QR frame(s) from ${files.length} image(s). Load more photos of later frames to continue.`;
       }
     } catch (err) {
       this.showError(err instanceof Error ? err.message : 'Could not decode the photos.');

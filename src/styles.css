@@ -316,6 +316,10 @@ h3 {
   margin-bottom: 0.9rem;
 }
 
+.segment-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .seg-option {
   display: flex;
   flex-direction: column;
